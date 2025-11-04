@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Interactive IRF & Cumulative (STR, by G and ΔFSI)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:16px;color:#222}
+  .panel{max-width:1100px;margin:auto}
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0 18px}
+  .card{padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+  .row{display:flex;align-items:center;gap:10px}
+  .row input[type="range"]{flex:1}
+  .tiny{font-size:12px;color:#555}
+  .plots{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  svg{width:100%;height:360px;background:white;border:1px solid #eee;border-radius:8px}
+  .axis path,.axis line{stroke:#aaa;shape-rendering:crispEdges}
+  .grid line{stroke:#e5e7eb}
+  .legend{font-size:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;color:#111;background:#eee;margin-left:8px}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h2>Interactive IRF & Cumulative — STR (by <i>G</i> and one-time ΔFSI)</h2>
+  <div class="controls">
+    <div class="card">
+      <div class="row">
+        <label for="gSlider"><b>Regime index G</b> (0–1)</label>
+        <span id="gVal" class="pill">0.716</span>
+      </div>
+      <input id="gSlider" type="range" min="0" max="1" step="0.001" value="0.716" />
+      <div class="tiny">Color reflects regime by G: LS (G &lt; 0.3422) • IS (0.3422 ≤ G &lt; 0.9655) • HS (G ≥ 0.9655)</div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <label for="shockSlider"><b>Shock size</b> ΔFSI (one-time, enters with 1-lag)</label>
+        <span id="shockVal" class="pill">0.0555</span>
+      </div>
+      <input id="shockSlider" type="range" min="0" max="0.35" step="0.0005" value="0.0555" />
+      <div class="tiny">Tip: IS σ≈0.0555, LS σ≈0.0418, HS σ≈0.2468</div>
+    </div>
+  </div>
+
+  <div class="plots">
+    <div>
+      <svg id="irfSvg"></svg>
+      <div class="tiny" style="margin-top:6px">IRF = quarterly % change: exact map 100·(exp(x)−1)</div>
+    </div>
+    <div>
+      <svg id="cumSvg"></svg>
+      <div class="tiny" style="margin-top:6px">Cumulative = level % change: exact map 100·(exp(Σx)−1)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Model params (from your STR printout) ===== */
+const cL =  0.008409,  bL = -0.240669, aL = -0.290350;
+const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
+
+/* Regime thresholds by G (coloring) */
+const G_CUT_LOW = 0.3422;   // LS / IS
+const G_CUT_HIGH = 0.9655;  // IS / HS
+const colors = {
+  LS: "#2E7D32",   // green
+  IS: "#F9A825",   // amber
+  HS: "#C62828"    // red
+};
+
+/* Plot settings */
+const H  = 20;            // horizon (quarters)
+const H1 = 4, H5 = 20;    // markers
+const margin = {top: 24, right: 16, bottom: 36, left: 52};
+
+/* ===== Utilities ===== */
+const expPct  = x => 100*(Math.exp(x)-1);
+const lineGen = (xScale, yScale) => d3.line()
+  .x((d,i) => xScale(i))
+  .y(d => yScale(d))
+  .curve(d3.curveMonotoneX);
+
+function regimeByG(G){
+  if (G < G_CUT_LOW) return "LS";
+  if (G < G_CUT_HIGH) return "IS";
+  return "HS";
+}
+
+/* Compute IRF and cumulative given G and a one-time shock dFSI (lagged) */
+function computePaths(G, dFSI){
+  // effective coeffs (intercept not used in IRF)
+  const beta = bL + bN*G;
+  const phi  = aL + aN*G;
+
+  // log-IRF
+  const irfLog = Array(H+1).fill(0);
+  if (isFinite(dFSI) && isFinite(beta) && isFinite(phi)){
+    irfLog[1] = beta * dFSI;          // shock hits with lag
+    for (let h=2; h<=H; h++) irfLog[h] = irfLog[h-1]*phi;
+  }
+  // cumulative in logs
+  const cumLog = [];
+  let acc = 0;
+  for (let h=0; h<=H; h++){ acc += (h===0 ? 0 : irfLog[h]); cumLog.push(acc); }
+
+  // exact % transforms
+  const irfPct = irfLog.map(expPct);
+  const cumPct = cumLog.map(expPct);
+  return {beta, phi, irfPct, cumPct};
+}
+
+/* ===== Build plots ===== */
+function setupSVG(svgSel, title){
+  const svg = d3.select(svgSel);
+  const width  = svg.node().clientWidth;
+  const height = svg.node().clientHeight;
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  svg.selectAll("*").remove();
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  g.append("text").attr("x", 0).attr("y", -6).attr("fill", "#111")
+    .style("font-weight", 600).text(title);
+
+  // axes scaffolding
+  const x = d3.scaleLinear().domain([0,H]).range([0, innerW]);
+  const y = d3.scaleLinear().domain([-1.6, 0.2]).nice().range([innerH, 0]); // sensible default; will rescale
+
+  const xAxis = g.append("g").attr("class","axis")
+    .attr("transform", `translate(0,${innerH})`);
+  const yAxis = g.append("g").attr("class","axis");
+
+  // grid
+  g.append("g").attr("class","grid")
+    .attr("transform", `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).ticks(H/2).tickSize(-innerH).tickFormat(""));
+  g.append("g").attr("class","grid")
+    .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(""));
+
+  // focus line(s) at 1y & 5y
+  const vLines = g.append("g").attr("class","vlines");
+  [H1,H5].forEach(q => {
+    vLines.append("line")
+      .attr("x1", x(q)).attr("x2", x(q))
+      .attr("y1", 0).attr("y2", innerH)
+      .attr("stroke", "#bbb").attr("stroke-dasharray", "4,4");
+  });
+
+  // zero line
+  g.append("line")
+    .attr("x1", 0).attr("x2", innerW)
+    .attr("y1", y(0)).attr("y2", y(0))
+    .attr("stroke", "#111").attr("opacity", 0.8);
+
+  // group for the path
+  const path = g.append("path")
+    .attr("fill", "none")
+    .attr("stroke-width", 2.25);
+
+  // labels
+  const xLab = g.append("text")
+    .attr("x", innerW/2).attr("y", innerH+28)
+    .attr("text-anchor","middle").attr("fill","#333").text("Quarters");
+
+  const yLab = g.append("text")
+    .attr("transform","rotate(-90)")
+    .attr("x", -innerH/2).attr("y", -40)
+    .attr("text-anchor","middle").attr("fill","#333").text("Percent");
+
+  return {svg, g, x, y, xAxis, yAxis, path, innerW, innerH, line: lineGen(x,y)};
+}
+
+const irfPlot = setupSVG("#irfSvg", "IRF (quarterly, %)");
+const cumPlot = setupSVG("#cumSvg", "Cumulative (level, %)");
+
+/* ===== Update routine ===== */
+function update(){
+  const G     = +d3.select("#gSlider").property("value");
+  const dFSI  = +d3.select("#shockSlider").property("value");
+  d3.select("#gVal").text(G.toFixed(3));
+  d3.select("#shockVal").text(dFSI.toFixed(4));
+
+  const reg = regimeByG(G);
+  const stroke = colors[reg];
+
+  // compute
+  const {irfPct, cumPct} = computePaths(G, dFSI);
+
+  // rescale y to data (with margins)
+  function setY(plot, data){
+    const pad = 0.06;
+    const lo = d3.min(data), hi = d3.max(data);
+    const span = Math.max(0.2, hi - lo);
+    plot.y.domain([lo - pad*span, hi + pad*span]).nice();
+    plot.yAxis.transition().duration(150).call(d3.axisLeft(plot.y).ticks(6));
+    plot.line = lineGen(plot.x, plot.y);
+    // redraw zero line
+    plot.g.selectAll("line.zero").data([0]).join(
+      enter => enter.append("line").attr("class","zero")
+        .attr("x1",0).attr("x2",plot.innerW).attr("y1",plot.y(0)).attr("y2",plot.y(0))
+        .attr("stroke","#111").attr("opacity",0.8),
+      update => update.attr("y1",plot.y(0)).attr("y2",plot.y(0)),
+      exit => exit.remove()
+    );
+  }
+
+  // x-axes with ticks every 2 quarters
+  [irfPlot, cumPlot].forEach(p => {
+    p.xAxis.call(d3.axisBottom(p.x).ticks(H/2));
+  });
+
+  // IRF
+  setY(irfPlot, irfPct);
+  irfPlot.path.datum(irfPct)
+    .attr("stroke", stroke)
+    .attr("d", irfPlot.line);
+
+  // Cumulative
+  setY(cumPlot, cumPct);
+  cumPlot.path.datum(cumPct)
+    .attr("stroke", stroke)
+    .attr("d", cumPlot.line);
+}
+
+d3.selectAll("#gSlider,#shockSlider").on("input", update);
+update();
+</script>
+</body>
+</html>

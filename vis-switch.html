@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Regime-Switch IRF (STR) — intercept included, baseline-subtracted</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:16px;color:#111}
+  .wrap{max-width:1100px;margin:auto}
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0 18px}
+  .card{padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+  .row{display:flex;align-items:center;gap:10px}
+  .row input[type="range"]{flex:1}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eee;margin-left:8px}
+  .tiny{font-size:12px;color:#555}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 16px}
+  .meta .tag{padding:2px 8px;border-radius:999px;background:#eef;border:1px solid #dde}
+  .plots{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  svg{width:100%;height:360px;background:#fff;border:1px solid #eee;border-radius:8px}
+  .axis path,.axis line{stroke:#aaa;shape-rendering:crispEdges}
+  .grid line{stroke:#e5e7eb}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Regime-Switch IRF (STR): intercept included, baseline-subtracted</h2>
+
+  <div class="controls">
+    <div class="card">
+      <div class="row">
+        <label><b>Initial FSI level</b></label>
+        <span id="fsi0Val" class="pill">0.1411</span>
+      </div>
+      <input id="fsi0" type="range" min="0" max="0.8" step="0.0005" value="0.1411">
+      <div class="tiny">Mapped to a regime (by FSI bands) → representative Ḡ is used for coefficients.</div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label><b>One-time ΔFSI shock</b> (enters at t=1 via ΔFSI<sub>t−1</sub>)</label>
+        <span id="dFsiVal" class="pill">0.0555</span>
+      </div>
+      <input id="dFsi" type="range" min="-0.35" max="0.35" step="0.0005" value="0.0555">
+      <div class="tiny">Try σ by band: LS≈0.0418 • IS≈0.0555 • HS≈0.2468</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span class="tag">FSI bands (for mapping only): LS ≤ 0.1187 • IS (0.1187, 0.1704] • HS &gt; 0.1704</span>
+    <span class="tag">Regime switch occurs at <b>t=3</b> (transition uses ΔFSI<sub>t−3</sub>)</span>
+    <span class="tag">Intercept <b>is included</b> in both baseline and switching paths</span>
+  </div>
+
+  <div class="plots">
+    <div>
+      <svg id="irfSvg"></svg>
+      <div class="tiny" style="margin-top:6px">IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted</div>
+    </div>
+    <div>
+      <svg id="cumSvg"></svg>
+      <div class="tiny" style="margin-top:6px">Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== STR coefficients (from your estimation) =====
+   dlog y_t = (cL + bL·ΔFSI_{t−1} + aL·Δlogy_{t−1})
+            + (cN + bN·ΔFSI_{t−1} + aN·Δlogy_{t−1}) · G_t
+   We now INCLUDE the intercept term in both baseline and switching paths. */
+const cL =  0.008409,  bL = -0.240669, aL = -0.290350;
+const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
+
+/* Regime thresholds in G (used conceptually for coloring; mapping FSI→band→Ḡ) */
+const G_CUT_LOW  = 0.3422;   // LS / IS
+const G_CUT_HIGH = 0.9655;   // IS / HS
+
+/* FSI bands for mapping initial/target regime */
+const FSI_CUT_LOW  = 0.1187; // LS / IS
+const FSI_CUT_HIGH = 0.1704; // IS / HS
+
+/* Representative mean Ḡ for each band (from your table) */
+const G_MEAN = { LS: 0.0013, IS: 0.7164, HS: 0.9999 };
+
+/* Colors keyed by regime */
+const REG_COLOR = { LS: "#2E7D32", IS: "#F9A825", HS: "#C62828" };
+
+/* Plot settings */
+const H = 20;                 // horizon (quarters)
+const SWITCH_LAG = 3;         // regime switch at t = 3
+const H1 = 4, H5 = 20;
+const margin = {top: 24, right: 16, bottom: 36, left: 52};
+
+const expPct = x => 100*(Math.exp(x)-1);
+
+/* Map FSI level to band, then to representative Ḡ */
+function bandFromFSI(fsi){
+  if (fsi <= FSI_CUT_LOW) return "LS";
+  if (fsi <= FSI_CUT_HIGH) return "IS";
+  return "HS";
+}
+function GfromFSI(fsi){ return G_MEAN[bandFromFSI(fsi)]; }
+
+/* Given G, compute effective coefficients (now including intercept c(G)) */
+function coeffs(G){
+  const c    = cL + cN*G;
+  const beta = bL + bN*G;
+  const phi  = aL + aN*G;
+  return {c, beta, phi};
+}
+
+/* Simulate baseline (constant regime at G_from) vs switching (G_from until t<3, then G_to).
+   Shock is one-off ΔFSI = s, enters ΔFSI_{t−1} at t=1.
+   RETURNS baseline-subtracted IRF (%) and cumulative (%), with intercept INCLUDED. */
+function simulateSwitch(FSI0, shock){
+  const FSI1 = FSI0 + shock;
+  const bandFrom = bandFromFSI(FSI0);
+  const bandTo   = bandFromFSI(FSI1);
+  const G_from = GfromFSI(FSI0);
+  const G_to   = GfromFSI(FSI1);
+  const {c:c0, beta:beta0, phi:phi0} = coeffs(G_from);
+
+  // Baseline (no shock, stay in from-regime), WITH intercept
+  const dlog_base = Array(H+1).fill(0);
+  for (let t=1; t<=H; t++){
+    dlog_base[t] = c0 + phi0*dlog_base[t-1];
+  }
+  const ylog_base = dlog_base.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
+
+  // Switching path (shock + regime change after 3q), WITH intercept
+  const dlog_sw = Array(H+1).fill(0);
+  for (let t=1; t<=H; t++){
+    const useG = (t < SWITCH_LAG) ? G_from : G_to;
+    const {c, beta, phi} = coeffs(useG);
+    const x_lag = (t === 1) ? shock : 0; // one-time ΔFSI enters with 1-lag
+    dlog_sw[t] = c + phi*dlog_sw[t-1] + beta*x_lag;
+  }
+  const ylog_sw = dlog_sw.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
+
+  // Deviations vs baseline
+  const irf_log = dlog_sw.map((v,i)=>v - dlog_base[i]);
+  const cum_log = ylog_sw.map((v,i)=>v - ylog_base[i]);
+
+  // Exact % transforms
+  const irf_pct = irf_log.map(expPct);
+  const cum_pct = cum_log.map(expPct);
+
+  return {
+    irf_pct, cum_pct,
+    meta: {FSI0, FSI1, bandFrom, bandTo, G_from, G_to}
+  };
+}
+
+/* ===== Plot scaffolding ===== */
+function setupSVG(sel, title){
+  const svg = d3.select(sel);
+  const W = svg.node().clientWidth, Ht = svg.node().clientHeight;
+  const innerW = W - margin.left - margin.right;
+  const innerH = Ht - margin.top - margin.bottom;
+
+  svg.selectAll("*").remove();
+  const g = svg.append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+  g.append("text").attr("x",0).attr("y",-6).attr("fill","#111").style("font-weight",600).text(title);
+
+  const x = d3.scaleLinear().domain([0,H]).range([0,innerW]);
+  const y = d3.scaleLinear().domain([-1.5,0.2]).range([innerH,0]).nice();
+
+  const xAxis = g.append("g").attr("class","axis").attr("transform",`translate(0,${innerH})`);
+  const yAxis = g.append("g").attr("class","axis");
+
+  // grids
+  g.append("g").attr("class","grid").attr("transform",`translate(0,${innerH})`)
+    .call(d3.axisBottom(x).ticks(H/2).tickSize(-innerH).tickFormat(""));
+  g.append("g").attr("class","grid")
+    .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(""));
+
+  // vertical guides: 1y, switch, 5y
+  const v = g.append("g").attr("class","vlines");
+  [H1, SWITCH_LAG, H5].forEach((q, i) => {
+    v.append("line").attr("x1",x(q)).attr("x2",x(q)).attr("y1",0).attr("y2",innerH)
+      .attr("stroke", i===1 ? "#999" : "#bbb")
+      .attr("stroke-dasharray", i===1 ? "6,4" : "4,4");
+  });
+
+  // zero line
+  const zero = g.append("line").attr("x1",0).attr("x2",innerW).attr("y1",y(0)).attr("y2",y(0))
+    .attr("stroke","#111").attr("opacity",0.8);
+
+  const path = g.append("path").attr("fill","none").attr("stroke-width",2.4);
+  const line = d3.line().x((d,i)=>x(i)).y(d=>y(d)).curve(d3.curveMonotoneX);
+
+  return {svg,g,x,y,xAxis,yAxis,path,line,innerW,innerH,zero};
+}
+
+const irfPlot = setupSVG("#irfSvg","IRF (Δ vs baseline), % — intercept included");
+const cumPlot = setupSVG("#cumSvg","Cumulative (Δ vs baseline), % — intercept included");
+
+/* ===== Update ===== */
+function update(){
+  const FSI0 = +d3.select("#fsi0").property("value");
+  const dFSI = +d3.select("#dFsi").property("value");
+  d3.select("#fsi0Val").text(FSI0.toFixed(4));
+  d3.select("#dFsiVal").text(dFSI.toFixed(4));
+
+  const {irf_pct, cum_pct, meta} = simulateSwitch(FSI0, dFSI);
+  const color = REG_COLOR[meta.bandTo];
+
+  function redraw(plot, data){
+    // x ticks every 2 quarters
+    plot.xAxis.call(d3.axisBottom(plot.x).ticks(H/2));
+    // auto y with padding
+    const lo = d3.min(data), hi = d3.max(data);
+    const span = Math.max(0.2, hi-lo), pad = 0.08;
+    plot.y.domain([lo - pad*span, hi + pad*span]).nice();
+    plot.yAxis.call(d3.axisLeft(plot.y).ticks(6));
+    plot.zero.attr("y1",plot.y(0)).attr("y2",plot.y(0));
+    plot.path.datum(data).attr("stroke", color).attr("d", plot.line);
+  }
+
+  redraw(irfPlot, irf_pct);
+  redraw(cumPlot, cum_pct);
+
+  // meta badges (from → to)
+  const metaBox = d3.select(".meta");
+  metaBox.selectAll(".dyn").remove();
+  metaBox.append("span").attr("class","tag dyn")
+    .text(`From: ${meta.bandFrom} (Ḡ=${meta.G_from.toFixed(3)})  →  To: ${meta.bandTo} (Ḡ=${meta.G_to.toFixed(3)})`);
+  metaBox.append("span").attr("class","tag dyn")
+    .text(`FSI: ${meta.FSI0.toFixed(4)} → ${(meta.FSI1).toFixed(4)}  (Δ=${(meta.FSI1-meta.FSI0).toFixed(4)})`);
+}
+
+d3.selectAll("#fsi0,#dFsi").on("input", update);
+update();
+</script>
+</body>
+</html>
