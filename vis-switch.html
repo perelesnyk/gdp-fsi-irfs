@@ -55,11 +55,11 @@
   <div class="plots">
     <div>
       <svg id="irfSvg"></svg>
-      <div class="tiny" style="margin-top:6px">IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted</div>
+      <div class="tiny" style="margin-top:6px">IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted. Shaded area shows 68% confidence interval (±1 SE).</div>
     </div>
     <div>
       <svg id="cumSvg"></svg>
-      <div class="tiny" style="margin-top:6px">Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted</div>
+      <div class="tiny" style="margin-top:6px">Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted. Shaded area shows 68% confidence interval (±1 SE).</div>
     </div>
   </div>
 </div>
@@ -71,6 +71,10 @@
    We now INCLUDE the intercept term in both baseline and switching paths. */
 const cL =  0.008409,  bL = -0.240669, aL = -0.290350;
 const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
+
+/* Standard errors (from HAC covariance matrix) */
+const se_cL = 0.0029,  se_bL = 0.0149,  se_aL = 0.0213;
+const se_cN = 0.0032,  se_bN = 0.0161,  se_aN = 0.0590;
 
 /* Regime thresholds in G (used conceptually for coloring; mapping FSI→band→Ḡ) */
 const G_CUT_LOW  = 0.3422;   // LS / IS
@@ -94,6 +98,12 @@ const margin = {top: 24, right: 16, bottom: 36, left: 52};
 
 const expPct = x => 100*(Math.exp(x)-1);
 
+const areaGen = (xScale, yScale) => d3.area()
+  .x((d,i) => xScale(i))
+  .y0(d => yScale(d.lower))
+  .y1(d => yScale(d.upper))
+  .curve(d3.curveMonotoneX);
+
 /* Map FSI level to band, then to representative Ḡ */
 function bandFromFSI(fsi){
   if (fsi <= FSI_CUT_LOW) return "LS";
@@ -107,19 +117,24 @@ function coeffs(G){
   const c    = cL + cN*G;
   const beta = bL + bN*G;
   const phi  = aL + aN*G;
-  return {c, beta, phi};
+  // Standard errors for effective coefficients
+  const se_c    = Math.sqrt(se_cL**2 + (G*se_cN)**2);
+  const se_beta = Math.sqrt(se_bL**2 + (G*se_bN)**2);
+  const se_phi  = Math.sqrt(se_aL**2 + (G*se_aN)**2);
+  return {c, beta, phi, se_c, se_beta, se_phi};
 }
 
 /* Simulate baseline (constant regime at G_from) vs switching (G_from until t<3, then G_to).
    Shock is one-off ΔFSI = s, enters ΔFSI_{t−1} at t=1.
-   RETURNS baseline-subtracted IRF (%) and cumulative (%), with intercept INCLUDED. */
+   RETURNS baseline-subtracted IRF (%) and cumulative (%), with intercept INCLUDED, plus 68% CI. */
 function simulateSwitch(FSI0, shock){
   const FSI1 = FSI0 + shock;
   const bandFrom = bandFromFSI(FSI0);
   const bandTo   = bandFromFSI(FSI1);
   const G_from = GfromFSI(FSI0);
   const G_to   = GfromFSI(FSI1);
-  const {c:c0, beta:beta0, phi:phi0} = coeffs(G_from);
+  const cf0 = coeffs(G_from);
+  const {c:c0, beta:beta0, phi:phi0} = cf0;
 
   // Baseline (no shock, stay in from-regime), WITH intercept
   const dlog_base = Array(H+1).fill(0);
@@ -128,26 +143,56 @@ function simulateSwitch(FSI0, shock){
   }
   const ylog_base = dlog_base.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
 
-  // Switching path (shock + regime change after 3q), WITH intercept
+  // Switching path (shock + regime change after 3q), WITH intercept - point estimate
   const dlog_sw = Array(H+1).fill(0);
+  const dlog_sw_var = Array(H+1).fill(0); // variance at each horizon
+  
   for (let t=1; t<=H; t++){
     const useG = (t < SWITCH_LAG) ? G_from : G_to;
-    const {c, beta, phi} = coeffs(useG);
+    const {c, beta, phi, se_c, se_beta, se_phi} = coeffs(useG);
     const x_lag = (t === 1) ? shock : 0; // one-time ΔFSI enters with 1-lag
+    
     dlog_sw[t] = c + phi*dlog_sw[t-1] + beta*x_lag;
+    
+    // Compute variance using proper error propagation for AR process
+    // Var(c + phi*y_{t-1} + beta*x) ≈ Var(c) + phi²*Var(y_{t-1}) + Var(beta*x)
+    //                                  + 2*phi*Cov(c, y_{t-1}) [≈0 for large sample]
+    const var_intercept = se_c**2;
+    const var_ar = (phi**2) * dlog_sw_var[t-1];
+    const var_shock = (x_lag !== 0) ? (se_beta * x_lag)**2 : 0;
+    
+    dlog_sw_var[t] = var_intercept + var_ar + var_shock + (se_phi * dlog_sw[t-1])**2;
   }
+  
+  // Convert variance to ±1 SE bands (symmetric around point estimate)
+  const dlog_sw_upper = dlog_sw.map((v, i) => v + Math.sqrt(dlog_sw_var[i]));
+  const dlog_sw_lower = dlog_sw.map((v, i) => v - Math.sqrt(dlog_sw_var[i]));
+  
   const ylog_sw = dlog_sw.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
+  const ylog_sw_upper = dlog_sw_upper.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
+  const ylog_sw_lower = dlog_sw_lower.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
 
   // Deviations vs baseline
   const irf_log = dlog_sw.map((v,i)=>v - dlog_base[i]);
+  const irf_log_upper = dlog_sw_upper.map((v,i)=>v - dlog_base[i]);
+  const irf_log_lower = dlog_sw_lower.map((v,i)=>v - dlog_base[i]);
+  
   const cum_log = ylog_sw.map((v,i)=>v - ylog_base[i]);
+  const cum_log_upper = ylog_sw_upper.map((v,i)=>v - ylog_base[i]);
+  const cum_log_lower = ylog_sw_lower.map((v,i)=>v - ylog_base[i]);
 
   // Exact % transforms
   const irf_pct = irf_log.map(expPct);
+  const irf_pct_upper = irf_log_upper.map(expPct);
+  const irf_pct_lower = irf_log_lower.map(expPct);
+  
   const cum_pct = cum_log.map(expPct);
+  const cum_pct_upper = cum_log_upper.map(expPct);
+  const cum_pct_lower = cum_log_lower.map(expPct);
 
   return {
-    irf_pct, cum_pct,
+    irf_pct, irf_pct_upper, irf_pct_lower,
+    cum_pct, cum_pct_upper, cum_pct_lower,
     meta: {FSI0, FSI1, bandFrom, bandTo, G_from, G_to}
   };
 }
@@ -187,10 +232,12 @@ function setupSVG(sel, title){
   const zero = g.append("line").attr("x1",0).attr("x2",innerW).attr("y1",y(0)).attr("y2",y(0))
     .attr("stroke","#111").attr("opacity",0.8);
 
+  const ciArea = g.append("path").attr("class","ci-area")
+    .attr("fill-opacity",0.2).attr("stroke","none");
   const path = g.append("path").attr("fill","none").attr("stroke-width",2.4);
   const line = d3.line().x((d,i)=>x(i)).y(d=>y(d)).curve(d3.curveMonotoneX);
 
-  return {svg,g,x,y,xAxis,yAxis,path,line,innerW,innerH,zero};
+  return {svg,g,x,y,xAxis,yAxis,ciArea,path,line,innerW,innerH,zero};
 }
 
 const irfPlot = setupSVG("#irfSvg","IRF (Δ vs baseline), % — intercept included");
@@ -203,23 +250,35 @@ function update(){
   d3.select("#fsi0Val").text(FSI0.toFixed(4));
   d3.select("#dFsiVal").text(dFSI.toFixed(4));
 
-  const {irf_pct, cum_pct, meta} = simulateSwitch(FSI0, dFSI);
+  const {
+    irf_pct, irf_pct_upper, irf_pct_lower,
+    cum_pct, cum_pct_upper, cum_pct_lower,
+    meta
+  } = simulateSwitch(FSI0, dFSI);
   const color = REG_COLOR[meta.bandTo];
 
-  function redraw(plot, data){
+  function redraw(plot, data, dataUpper, dataLower){
     // x ticks every 2 quarters
     plot.xAxis.call(d3.axisBottom(plot.x).ticks(H/2));
-    // auto y with padding
-    const lo = d3.min(data), hi = d3.max(data);
+    // auto y with padding, considering CI bounds
+    const lo = Math.min(d3.min(data), d3.min(dataLower));
+    const hi = Math.max(d3.max(data), d3.max(dataUpper));
     const span = Math.max(0.2, hi-lo), pad = 0.08;
     plot.y.domain([lo - pad*span, hi + pad*span]).nice();
     plot.yAxis.call(d3.axisLeft(plot.y).ticks(6));
     plot.zero.attr("y1",plot.y(0)).attr("y2",plot.y(0));
+    
+    // Draw confidence interval area
+    const ciData = data.map((v, i) => ({lower: dataLower[i], upper: dataUpper[i]}));
+    const area = areaGen(plot.x, plot.y);
+    plot.ciArea.datum(ciData).attr("fill", color).attr("d", area);
+    
+    // Draw main line
     plot.path.datum(data).attr("stroke", color).attr("d", plot.line);
   }
 
-  redraw(irfPlot, irf_pct);
-  redraw(cumPlot, cum_pct);
+  redraw(irfPlot, irf_pct, irf_pct_upper, irf_pct_lower);
+  redraw(cumPlot, cum_pct, cum_pct_upper, cum_pct_lower);
 
   // meta badges (from → to)
   const metaBox = d3.select(".meta");
