@@ -46,11 +46,11 @@
   <div class="plots">
     <div>
       <svg id="irfSvg"></svg>
-      <div class="tiny" style="margin-top:6px">IRF = quarterly % change: exact map 100·(exp(x)−1)</div>
+      <div class="tiny" style="margin-top:6px">IRF = quarterly % change: exact map 100·(exp(x)−1). Shaded area shows 68% confidence interval (±1 SE).</div>
     </div>
     <div>
       <svg id="cumSvg"></svg>
-      <div class="tiny" style="margin-top:6px">Cumulative = level % change: exact map 100·(exp(Σx)−1)</div>
+      <div class="tiny" style="margin-top:6px">Cumulative = level % change: exact map 100·(exp(Σx)−1). Shaded area shows 68% confidence interval (±1 SE).</div>
     </div>
   </div>
 </div>
@@ -59,6 +59,10 @@
 /* ===== Model params (from your STR printout) ===== */
 const cL =  0.008409,  bL = -0.240669, aL = -0.290350;
 const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
+
+/* Standard errors (from HAC covariance matrix) */
+const se_bL = 0.0149,  se_aL = 0.0213;
+const se_bN = 0.0161,  se_aN = 0.0590;
 
 /* Regime thresholds by G (coloring) */
 const G_CUT_LOW = 0.3422;   // LS / IS
@@ -81,6 +85,12 @@ const lineGen = (xScale, yScale) => d3.line()
   .y(d => yScale(d))
   .curve(d3.curveMonotoneX);
 
+const areaGen = (xScale, yScale) => d3.area()
+  .x((d,i) => xScale(i))
+  .y0(d => yScale(d.lower))
+  .y1(d => yScale(d.upper))
+  .curve(d3.curveMonotoneX);
+
 function regimeByG(G){
   if (G < G_CUT_LOW) return "LS";
   if (G < G_CUT_HIGH) return "IS";
@@ -93,21 +103,57 @@ function computePaths(G, dFSI){
   const beta = bL + bN*G;
   const phi  = aL + aN*G;
 
-  // log-IRF
+  // Standard errors for beta and phi (simple linear combination)
+  const se_beta = Math.sqrt(se_bL**2 + (G*se_bN)**2);
+  const se_phi  = Math.sqrt(se_aL**2 + (G*se_aN)**2);
+
+  // log-IRF (point estimate)
   const irfLog = Array(H+1).fill(0);
+  const irfLog_upper = Array(H+1).fill(0);
+  const irfLog_lower = Array(H+1).fill(0);
+  
   if (isFinite(dFSI) && isFinite(beta) && isFinite(phi)){
-    irfLog[1] = beta * dFSI;          // shock hits with lag
-    for (let h=2; h<=H; h++) irfLog[h] = irfLog[h-1]*phi;
+    // Horizon 1: shock hits with lag
+    irfLog[1] = beta * dFSI;
+    irfLog_upper[1] = (beta + se_beta) * dFSI;
+    irfLog_lower[1] = (beta - se_beta) * dFSI;
+    
+    // Horizons 2+: propagate with persistence
+    for (let h=2; h<=H; h++){
+      irfLog[h] = irfLog[h-1] * phi;
+      // Upper/lower bounds with error propagation
+      // Approximation: use ± se_phi for each multiplication
+      irfLog_upper[h] = irfLog_upper[h-1] * (phi + se_phi);
+      irfLog_lower[h] = irfLog_lower[h-1] * (phi - se_phi);
+    }
   }
+  
   // cumulative in logs
-  const cumLog = [];
-  let acc = 0;
-  for (let h=0; h<=H; h++){ acc += (h===0 ? 0 : irfLog[h]); cumLog.push(acc); }
+  const cumLog = [], cumLog_upper = [], cumLog_lower = [];
+  let acc = 0, acc_u = 0, acc_l = 0;
+  for (let h=0; h<=H; h++){
+    acc += (h===0 ? 0 : irfLog[h]);
+    acc_u += (h===0 ? 0 : irfLog_upper[h]);
+    acc_l += (h===0 ? 0 : irfLog_lower[h]);
+    cumLog.push(acc);
+    cumLog_upper.push(acc_u);
+    cumLog_lower.push(acc_l);
+  }
 
   // exact % transforms
   const irfPct = irfLog.map(expPct);
+  const irfPct_upper = irfLog_upper.map(expPct);
+  const irfPct_lower = irfLog_lower.map(expPct);
+  
   const cumPct = cumLog.map(expPct);
-  return {beta, phi, irfPct, cumPct};
+  const cumPct_upper = cumLog_upper.map(expPct);
+  const cumPct_lower = cumLog_lower.map(expPct);
+  
+  return {
+    beta, phi, 
+    irfPct, irfPct_upper, irfPct_lower,
+    cumPct, cumPct_upper, cumPct_lower
+  };
 }
 
 /* ===== Build plots ===== */
@@ -154,6 +200,11 @@ function setupSVG(svgSel, title){
     .attr("stroke", "#111").attr("opacity", 0.8);
 
   // group for the path
+  const ciArea = g.append("path")
+    .attr("class", "ci-area")
+    .attr("fill-opacity", 0.2)
+    .attr("stroke", "none");
+    
   const path = g.append("path")
     .attr("fill", "none")
     .attr("stroke-width", 2.25);
@@ -168,7 +219,7 @@ function setupSVG(svgSel, title){
     .attr("x", -innerH/2).attr("y", -40)
     .attr("text-anchor","middle").attr("fill","#333").text("Percent");
 
-  return {svg, g, x, y, xAxis, yAxis, path, innerW, innerH, line: lineGen(x,y)};
+  return {svg, g, x, y, xAxis, yAxis, ciArea, path, innerW, innerH, line: lineGen(x,y)};
 }
 
 const irfPlot = setupSVG("#irfSvg", "IRF (quarterly, %)");
@@ -185,16 +236,21 @@ function update(){
   const stroke = colors[reg];
 
   // compute
-  const {irfPct, cumPct} = computePaths(G, dFSI);
+  const {
+    irfPct, irfPct_upper, irfPct_lower,
+    cumPct, cumPct_upper, cumPct_lower
+  } = computePaths(G, dFSI);
 
-  // rescale y to data (with margins)
-  function setY(plot, data){
+  // rescale y to data (with margins), considering confidence bounds
+  function setY(plot, data, dataUpper, dataLower){
     const pad = 0.06;
-    const lo = d3.min(data), hi = d3.max(data);
+    const lo = Math.min(d3.min(data), d3.min(dataLower));
+    const hi = Math.max(d3.max(data), d3.max(dataUpper));
     const span = Math.max(0.2, hi - lo);
     plot.y.domain([lo - pad*span, hi + pad*span]).nice();
     plot.yAxis.transition().duration(150).call(d3.axisLeft(plot.y).ticks(6));
     plot.line = lineGen(plot.x, plot.y);
+    plot.area = areaGen(plot.x, plot.y);
     // redraw zero line
     plot.g.selectAll("line.zero").data([0]).join(
       enter => enter.append("line").attr("class","zero")
@@ -210,14 +266,22 @@ function update(){
     p.xAxis.call(d3.axisBottom(p.x).ticks(H/2));
   });
 
-  // IRF
-  setY(irfPlot, irfPct);
+  // IRF - confidence band
+  const irfCI = irfPct.map((v, i) => ({lower: irfPct_lower[i], upper: irfPct_upper[i]}));
+  setY(irfPlot, irfPct, irfPct_upper, irfPct_lower);
+  irfPlot.ciArea.datum(irfCI)
+    .attr("fill", stroke)
+    .attr("d", irfPlot.area);
   irfPlot.path.datum(irfPct)
     .attr("stroke", stroke)
     .attr("d", irfPlot.line);
 
-  // Cumulative
-  setY(cumPlot, cumPct);
+  // Cumulative - confidence band
+  const cumCI = cumPct.map((v, i) => ({lower: cumPct_lower[i], upper: cumPct_upper[i]}));
+  setY(cumPlot, cumPct, cumPct_upper, cumPct_lower);
+  cumPlot.ciArea.datum(cumCI)
+    .attr("fill", stroke)
+    .attr("d", cumPlot.area);
   cumPlot.path.datum(cumPct)
     .attr("stroke", stroke)
     .attr("d", cumPlot.line);
