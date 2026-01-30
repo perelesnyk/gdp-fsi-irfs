@@ -109,35 +109,34 @@ function computePaths(G, dFSI){
 
   // log-IRF (point estimate)
   const irfLog = Array(H+1).fill(0);
-  const irfLog_upper = Array(H+1).fill(0);
-  const irfLog_lower = Array(H+1).fill(0);
+  const irfLog_var = Array(H+1).fill(0); // variance at each horizon
   
   if (isFinite(dFSI) && isFinite(beta) && isFinite(phi)){
     // Horizon 1: shock hits with lag
     irfLog[1] = beta * dFSI;
-    irfLog_upper[1] = (beta + se_beta) * dFSI;
-    irfLog_lower[1] = (beta - se_beta) * dFSI;
+    irfLog_var[1] = (se_beta * dFSI)**2;
     
     // Horizons 2+: propagate with persistence
+    // Var(phi * y_{h-1}) = phi² * Var(y_{h-1}) + y_{h-1}² * Var(phi)
     for (let h=2; h<=H; h++){
       irfLog[h] = irfLog[h-1] * phi;
-      // Upper/lower bounds with error propagation
-      // Approximation: use ± se_phi for each multiplication
-      irfLog_upper[h] = irfLog_upper[h-1] * (phi + se_phi);
-      irfLog_lower[h] = irfLog_lower[h-1] * (phi - se_phi);
+      irfLog_var[h] = (phi**2) * irfLog_var[h-1] + (irfLog[h-1]**2) * (se_phi**2);
     }
   }
   
+  // Convert variance to symmetric ±1 SE bands
+  const irfLog_upper = irfLog.map((v, i) => v + Math.sqrt(irfLog_var[i]));
+  const irfLog_lower = irfLog.map((v, i) => v - Math.sqrt(irfLog_var[i]));
+  
   // cumulative in logs
   const cumLog = [], cumLog_upper = [], cumLog_lower = [];
-  let acc = 0, acc_u = 0, acc_l = 0;
+  let acc = 0, acc_var = 0;
   for (let h=0; h<=H; h++){
     acc += (h===0 ? 0 : irfLog[h]);
-    acc_u += (h===0 ? 0 : irfLog_upper[h]);
-    acc_l += (h===0 ? 0 : irfLog_lower[h]);
+    acc_var += (h===0 ? 0 : irfLog_var[h]);
     cumLog.push(acc);
-    cumLog_upper.push(acc_u);
-    cumLog_lower.push(acc_l);
+    cumLog_upper.push(acc + Math.sqrt(acc_var));
+    cumLog_lower.push(acc - Math.sqrt(acc_var));
   }
 
   // exact % transforms
