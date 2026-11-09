@@ -1,0 +1,538 @@
+\documentclass[12pt,preprint,aps,author-year]{revtex4-1}
+
+% Fonts and spacing
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{setspace}
+
+% Graphics etc.
+\usepackage{graphicx}
+\usepackage{dcolumn}
+\usepackage{ulem}\normalem
+\usepackage{bm}
+\usepackage{microtype}
+\usepackage{array,makecell}
+
+% Natbib punctuation (author–year + round parentheses)
+\bibpunct{(}{)}{;}{a}{,}{,}
+
+% Load hyperref LAST
+\usepackage{hyperref}
+
+
+\begin{document}
+\renewcommand{\arraystretch}{1.2}
+\sloppy
+\renewcommand{\baselinestretch}{2.0}
+\normalsize
+\renewcommand\theadalign{tl}
+\renewcommand\theadfont{\normalsize\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellalign{tl}
+\newcommand{\Varcell}[1]{\parbox[t]{2.8cm}{\raggedright #1}}
+\newcommand{\Desccell}[1]{\parbox[t]{4.2cm}{\raggedright #1}}
+
+\title{Non-Linear Relationship between Financial Stress and Economic Activity in Times of Heightened Uncertainty: The Case of Ukraine}
+
+\date{\today}
+
+\author{Mariia Sydorovych, Ph.D}
+\email[E-mail: ]{mariya.sydorovych@ukma.edu.ua}
+\affiliation{Finance Department, Faculty of Economics, National University of Kyiv-Mohyla Academy, Skovorody Str. 2, 04070, Kyiv, Ukraine}
+\altaffiliation[Also at: ]{[Fill in alternative institution]}
+
+\author{Vasyl Zhuk}
+\email[E-mail: ]{v.zhuk@ukma.edu.ua}
+\affiliation{Finance Department, Faculty of Economics, National University of Kyiv-Mohyla Academy, Kyiv, Ukraine}
+\altaffiliation[Also at: ]{[Fill in alternative institution]}
+
+\keywords{financial stress transmission, smooth transition regression, exceptionally high uncertainty, emerging economies, Ukraine}
+\maketitle
+
+Add data to data repository (open) and to the Data Availability Statement before References.
+
+Figures -- formatting etc: \href{https://authorservices.taylorandfrancis.com/publishing-your-research/making-your-submission/submit-electronic-artwork/}{How to submit your electronic artwork - Author Services}
+
+Word count (main text, excluding references and appendices): XXX
+
+\textbf{Abstract}
+
+This study analyzes the non-linear relationship between financial stress and real economic activity in Ukraine from 2008 to 2025 using a smooth transition regression framework. The empirical results indicate asymmetric, regime-dependent responses of GDP to financial stress shocks. Using the Financial Stress Index as a transition variable, three regimes–low, intermediate, and high stress–are identified. The intermediate regime, which reflects the current environment shaped by the protracted Russian full-scale invasion, is characterized by persistent uncertainty, subdued growth and fragile equilibrium conditional on financial stress.
+
+\textbf{JEL codes:} C32, E44, G01, G2
+
+Abbreviations: GDP, FSI, STR, IRF
+
+\textit{The views expressed in this paper are those of the author(s) and do not necessarily represent the views of any institution the authors are affiliated with.}
+
+\newpage
+
+\begin{enumerate}
+\item \textbf{Introduction and Literature Review}
+\end{enumerate}
+Financial stability is widely recognized as a prerequisite for sustainable economic growth. The increasing integration of financial systems with the real economy has intensified interest in understanding the complex interlinkage between financial conditions and macroeconomic performance, rooting back in the ideas related to credit channel theory \citep{bernanke1983} and further developed in the 1990th with subsequent origination of the financial accelerator theory \citep{bernankegertlergilchrist1999}. Two decades ago, this integration was accompanied by the accumulation of systemic vulnerabilities – such as lax financial regulation and misperceptions of risks – which, when coupled with accommodative monetary policies, culminated in the 2007–2008 Global Financial Crisis (GFC) \citep{verickislam2010}. The crisis, originating in advanced economies, rapidly propagated to emerging markets, exposing the fragility of global financial systems. In response, to avoid the repeated crises, financial regulators tightened prudential regulation and supervision, and international financial architecture had to be rethought \citep{claessens2010}.
+
+In the aftermath of the GFC, a growing body of literature has examined the non-linear and state-dependent relationship between financial stress and economic activity, aiming to understand the impact of disruptions in financial markets on broader economic activity. In the search for the appropriate early warning indicators that could inform upcoming systemic downturns or recoveries, special interest has been placed on the potential role of the financial stress indices (FSIs) \citep{cardarelli2011, vasicek2017}.
+
+Aimed at informing counter-cyclical policy responses, multiple studies on the data from advanced economies have explored the efficiency of monetary policy and the transmission to output, inflation, and financial conditions, revealing disparities under various financial stress regimes \citep{saldias2017, fuchunli2010, floro2017, wichmann2022}. While \cite{romer2017} based on the data from 24 OECD countries from 1967 to 2012 find that financial distress in advanced economies leads to moderate but persistent Gross Domestic Product (GDP) contractions, they do not observe significant non-linear effects. In contrast, \cite{fuchunli2010} and \cite{duprey2020} do find that the Canadian economy can be characterized by regimes of low and high financial stress. According to the latter study, financial market stress above the 90th percentile is associated with a more persistent deterioration in macroeconomic performance. He finds a more persistent negative impact on real GDP growth in the high-stress regime.
+
+Recent cross-country empirical studies further underscore the heterogeneity of financial stress effects. \cite{roncagliolo2022} based on the 2005-2019 dataset from 14 advanced and emerging economies confirms that financial stress negatively correlates with economic growth, with stronger effects of financial stress in advanced economies. However, \cite{ahir2023} find the opposite: using a novel narrative-based financial stress index (FSI) constructed from Economist Intelligence Unit reports across 110 countries (1967–2018), they find that emerging markets experience more severe and persistent output losses in response to financial stress as compared to the advanced economies, particularly when initial stress levels are high. The impact of financial stress on economic activity is found to be non-linear, increasing with the stress level. Their findings also suggest that weaker economic activity exacerbates financial stress over the medium term. At the microeconomic level, financial stress is shown to depress firm-level investment, especially among smaller, more leveraged, and less profitable firms.
+
+Complementary evidence from India \citep{sahoo2020} reveals that financial stress leads to a decline in economic growth with a one-month lag, while sustained high growth can, in turn, elevate financial stress–highlighting the bidirectional and asymmetric nature of the relationship. Against this backdrop, our study contributes to the literature by focusing on emerging economies characterized by heightened macro-financial volatility. In particular, we examine the case of Ukraine, where the financial system has been repeatedly tested by crises, including the GFC, the 2014 Russian annexation of Crimea and Donbas invasion, the COVID-19 pandemic, and the ongoing Russian full-scale invasion. These episodes provide a unique setting to explore the dynamics of financial stress and its nexus with the economic activity under exceptionally high uncertainty.
+
+Using a Smooth Transition Regression (STR) framework, we investigate the non-linear relationship between financial stress – measured by a composite FSI – and real GDP in Ukraine. We assess whether financial stress significantly influences economic activity, whether it can serve as an early warning indicator, and whether economic downturns themselves exacerbate financial stress. Furthermore, we explore whether periods of exceptionally high uncertainty constitute a distinct regime or rather represent an extension of conventional high-stress state.
+
+In our study, we aim to contribute to the evolving body of knowledge on the nexus between financial stress and economic activity. To the best of our knowledge, there is a literature gap related to empirical studies in emerging economies, including due to the limited nature of the necessary data. The most recent experience from Ukraine can inform the understanding of the evolution of this non-linear relationship in normal times, times of crises, and under the abnormal circumstances of full-scale invasion.
+
+The remainder of the paper is structured as follows: Section II discusses the conceptual foundations and construction of the FSI, including its transmission channels and data sources. Section III presents the methodology and the econometric model. Section IV presents the empirical analysis of the impact of FSI on economic activity. Section V discusses empirical results and compares with existing studies. Section VI provides the conclusion including policy implications.
+
+\begin{enumerate}
+\item \textbf{Financial Stress Index: Definition, Methodology, and Transmission Channels}
+\end{enumerate}
+In response to the growing interest in lessons from past financial crises, the concept, application, and methodology of financial stress indices have evolved significantly over recent decades. This evolution was fueled by the increasing complexity of financial systems, the need for macroprudential surveillance tools, including the demand for early warning indicators capable of anticipating systemic disruptions – particularly in the aftermath of the GFC – as well as fostered due to wider data availability and new types of data analysis tools (such as content analysis based on natural language processing).
+
+The Bank of Canada was the first central bank to introduce a Financial Stress Index in 2003 \citep{illing2003}, laying the foundation for subsequent indices developed by institutions such as the Bank of England \citep{chatterjee2017}, the Federal Reserve \citep{carlson2011, stlouisfed} and Office of Financial Research \citep{monin2017}, and the European Central Bank (ECB). The ECB’s Composite Indicator of Systemic Stress (CISS) \citep{hollo2012} and the IMF’s Financial Conditions Index (FCI, 2017) \citep{imf_gfsr_2017} represent cross-country efforts to quantify and compare financial stress. These indices are typically constructed as composite measures, aggregating indicators across sectors – banking, government securities, corporate finance, households, and foreign exchange – based on their relevance to the respective financial systems.
+
+Although FSIs are continuous by design, much of the early literature has applied them in a binary fashion, distinguishing between crisis and non-crisis episodes and differentiating crises into systemic vs non-systemic. \cite{romer2017} goes beyond this approach, arguing that it fails to capture the varying intensity of financial stress. They advocate for narrative-based methodologies that codify financial distress as a continuous variable, enabling more nuanced analysis. This perspective is particularly relevant to our analysis, as the smooth transition framework enables us to move beyond a binary classification of crisis versus non-crisis states. Instead, it allows for the identification of an intermediate regime – distinct from conventional categorizations – that captures Ukraine’s sustained exposure to irregular shocks amid the ongoing Russian invasion. This modeling approach reveals evidence of invasion-related dynamics, wherein Ukraine experiences a prolonged phase of elevated, though not acute, financial stress driven by ad hoc war-induced disruptions and heightened economic uncertainty.
+
+For the purposes of this study, we utilize the Financial Stress Index developed by the National Bank of Ukraine (NBU), as documented by \cite{filatov2021}. The index comprises 20 indicators grouped into five subindices: banking sector, government securities, households, corporate sector, and foreign exchange market. These subindices are weighted according to their systemic relevance and aggregated using a multivariate GARCH model, which captures time-varying correlations among components to reflect systemic stress. The FSI enables real-time assessment of systemic stress, facilitates temporal comparisons of instability episodes, and distinguishes between systemic and idiosyncratic shocks.
+
+At the outset of the first FSI, the Bank of Canada defined stress as \textit{“the force exerted on economic agents by uncertainty and changing expectations of loss in financial markets and institutions” } \citep{illing2003}. This definition remains widely applicable and underpins many national FSIs that reflect interlinkages of financial markets and economic activity. There is a certain degree of heterogeneity in the composition of indices. Some indices integrate market-based indicators to assess the impact of both monetary and financial conditions, while others focus on solvency and liquidity metrics to isolate financial sector vulnerabilities. Much of the theoretical foundation stems from \cite{bernanke1983}, who introduced the concept of credit intermediation and its disruption as a key transmission channel of financial stress to the real economy. Moreover, the financial accelerator theory posits that worsening financial conditions amplify macroeconomic fluctuations through increased costs of credit intermediation \citep{bernankegertlergilchrist1999}.
+
+ing the COVID-19 pandemic, temporary forbearance measures were introduced, and coupled with the good shape of the banking sector following the reform in the preceding five years, the downturn was less severe than in other episodes. In 2022, the exchange rate was temporarily fixed vis-a-vis the U.S. Dollar, and the policy rate tightened. Starting late 2023, the central bank resumed exchange rate flexibility and eased monetary conditions and some of the capital flow measures. Despite the collateral destruction caused by the Russian invasion, the financial sector has shown resiIn Ukraine, the FSI captures both short- and long-term risks, including liquidity and credit risks in the banking and government sectors, as well as household uncertainty \citep{filatov2021}. Given the country’s relatively low credit penetration, the traditional credit intermediation channel is less dominant than in the existing cross-country research. Instead, financial stress is primarily transmitted through exchange rate volatility – exacerbated by high dollar-/euroization and balance sheet currency mismatches – which affects investment decisions, corporate borrowing, and consumer behavior while amplifying uncertainty. This component is dominant in the data and is captured in the exchange rate (FX) subindex that includes FX interventions by the central bank reflective of policy decisions, FX market volatility and risk perception by economic agents. Additional channels for financial stress propagation include sovereign and corporate risk premia as well as precautionary household actions in times of stress, such as deposit withdrawals, which may trigger liquidity pressures or even bank runs. These transmission mechanisms are reflected in its components of the indicator (see Figure 1) and are largely associated with the household uncertainty, risk perception by the economic agents as well as macroeconomic policies.
+
+\includegraphics[width=6.26in,height=2.52in]{img_0.png}
+
+\textbf{Figure 1. }The dynamics of FSI subindices, March 2008 - May 2025. Source: NBU FSR
+
+Ukraine’s current economic environment is shaped by the abnormal economic conditions amidst the Russian full-scale invasion. Following the initial shock, the economy has demonstrated resilience, supported by foreign aid and unconventional policy responses. Despite labor market adjustments due to migration and mobilization and ongoing disruptions – including infrastructure strikes and supply chain reconfigurations – the economy as well as financial system has adapted. While the ECB’s CISS has declined substantially since 2022 to slightly above pre-invasion levels \citep{ecb2024, ecbdata}, Ukraine’s FSI remains elevated relative to non-crisis periods, though below the peaks observed during the GFC, Russian Crimea annexation and invasion of Donbas regions in 2014 and the 2022 full-scale invasion.
+
+Our sample spans March 2008 to March 2025, encompassing multiple regimes. Between 2008 and 2013, Ukraine operated under fixed exchange rate and money targeting regime, with significant financial sector vulnerabilities. Following the 2014-2015 crisis, the country transitioned to floating exchange rate and inflation targeting and gradually liberalized capital flows \citep{imf2017}. The banking sector underwent substantial reform, including cleanup of the banking sector, recapitalization of the remaining banks, strengthened regulation and supervision, and increased transparency. Durlience.
+
+\includegraphics[width=6.26in,height=2.58in]{img_1.png}
+
+\textbf{Figure 2. }Historical perspective of the FSI dynamics during 2008-25. Source: NBU website
+
+We see the crises of 2014, 2020, and 2022 as exogenous in nature as the shocks were originating outside the domestic economy and are non-policy-driven. While difficult to predict, financial stress indicators are well-suited to capture the expectations and reactions of economic agents to such shocks. The imbalances built up in the economy prior to 2008 GFC, were driven by capital inflows from non-residents but also by domestic economic recovery.
+
+The daily Financial Stress Index (FSI) data are aggregated into quarterly frequency by computing period averages. Quarterly real GDP (RGDP), expressed in constant 2021 prices, is available from the first quarter of 2010 onward; pre-2010 observations have been rebased from 2016 price levels to ensure consistency. Seasonal adjustment of the RGDP series is performed using the TRAMO/SEATS methodology \citep{maravall2006}.
+
+\begin{enumerate}
+\item \textbf{The Methodology}
+\end{enumerate}
+Building on the narrative approach from \cite{romer2017} that helps differentiate on the degree of stress, we attempt to go beyond the wide-spread binary approach of identifying crisis vs non-crisis episodes. We capture this stance with the third regime by identifying its unique marginal characteristics given the irregular circumstances of full-scale invasion in the country and explore their properties. The smooth transition regression (STR) framework of \cite{terasvirta1994} is adopted instead of threshold models due to its suitability for shorter samples and its ability to estimate all parameters over the entire dataset without dividing it into subsamples. Even a single-transition STR model provides a continuous range of regimes, enabling the relationship between financial stress and economic activity to vary smoothly across states, thus overcoming the rigidity of binary crisis identification while retaining abrupt threshold dynamics as a possible mode.
+
+To determine the appropriate model specification, we first conducted Granger causality tests to assess whether both real GDP and the FSI should be treated as endogenous variables. Using quarterly data from 2008Q2 to 2025Q1, we applied the standard linear Granger test  \citep{granger1969} incorporating dummy variables to account for major external shocks. These include:
+
+\begin{itemize}
+\item \textbf{C08\_DUMMY}: 2009Q1 – Global Financial Crisis (this is the 1st effective observation of our sample given the lag structure, so most of GFC period has been cut off; this dummy tests the hypothesis of significant internal build-up of vulnerabilities other than those already captured in FSI);
+\item \textbf{WAR1\_DUMMY}: 2014Q1 – Russian invasion in Donbas and annexation of Crimea;
+\item \textbf{COVID\_DUMMY}: 2020Q2 – COVID-19 pandemic
+\item \textbf{WAR2\_DUMMY} / \textbf{WAR2\_DUMMY01}: 2022Q1 and 2022Q2 – Russian full-scale invasion
+\end{itemize}
+Stationarity was ensured by transforming the series into first differences (for FSI) and first differences of logarithms (for GDP). The Granger test results indicate a statistically significant unidirectional relationship from FSI to GDP for lags up to three quarters, with no evidence of reverse causality. It is worth clarifying that this type of causality is only an evidence of predictive precedence, not structural causality. See Appendix A for the summary of the tests performed. The confusion matrix analysis (Appendices A1–A2) indicates moderate predictive power of lagged FSI for GDP recoveries and slightly weaker performance for GDP declines. When applying the turning-point definition (ability to predict sign reversal) of GDP changes (Appendix A3), lagged FSI exhibits only marginal predictive capability for both directions.
+
+We then tested the model for non-linear dynamics using the Smooth Transition Regression (STR) framework. In line with the approaches by \cite{ahir2023}, we specify the baseline form of the FSI–GDP relationship as follows:
+\begin{equation}\label{eq:baseline}
+\Delta y_t = F\big(\Delta y_{t-1},\, \Delta s_{t-1},\, X_t\big)
+\end{equation}
+
+where $\Delta y_t$ is GDP (in the form of first-order log-difference), $\Delta y_{t-1}$ is the 1-st lag of GDP log-difference denoting the assumption of 1-st order AR(1) process, $\Delta s_{t-1}$ is the lagged FSI log-difference, $X_t$ is a vector of dummies to account for the exogenous disruptive processes, as described above. The linear form of this relation did not support LSE assumptions, and was not able to explain the higher-stress periods GDP dynamics (also had higher AIC and BIC criteria than the following STR models). Following the procedures outlined by \cite{terasvirta1994}, \cite{luukkonen1988}, \cite{terasvirta1998}, and \cite{escribano1999}, we identified strong evidence of logistic-type non-linearity (Appendix B). The transition variable – lagged FSI – exhibited a zero threshold, confirming the presence of regime-switching behavior. The preferred specification is a first-order logistic STR (LSTR1), using $s_{t-3}$ as a transition variable (three-quarter lag selected based on the goodness-of-fit criterion), which allows the impact of financial stress on GDP to vary smoothly across regimes.
+
+Our results provide robust evidence that the relationship between the FSI and GDP exhibits regime-dependent behavior, differing markedly between low- and high-stress environments as defined by the three-quarter lag of the FSI. Accordingly, we estimate the model in the following specification:
+\begin{equation}\label{eq:lstr}
+\Delta y_t = \alpha_0 + \alpha_1 \Delta s_{t-1} + \alpha_2 \Delta y_{t-1}
++ G(s_{t-3},\gamma,c)\big(\beta_0 + \beta_1 \Delta s_{t-1} + \beta_2 \Delta y_{t-1}\big)
++ \boldsymbol{\delta}'\mathbf{X}_t + \varepsilon_t
+\end{equation}
+
+and the logistic transition function is defined as
+\begin{equation}\label{eq:logistic}
+G(s_{t-3};\gamma,c)=\frac{1}{1+\exp[-\gamma(s_{t-3}-c)]}, \qquad \gamma>0.
+\end{equation}
+
+where $\Delta y_t$ is real GDP (seasonally adjusted, first log-difference); $s_{t-3}$ denotes the lagged FSI, used as the transition variable capturing the level of financial tension in the economy; $\Delta s_{t-1}$ is lagged difference of FSI; $\mathbf{X}_t$ is a vector of exogenous dummy variables that control for major structural disturbances, including the first-war dummy ($\text{WAR1}$), the full-scale-war dummy ($\text{WAR2}$), and the COVID-19 dummy (2008 dummy has proven to be insignificant); $\varepsilon_t$ is an i.i.d. disturbance term with zero mean and finite variance.
+
+The parameters $\alpha_0, \alpha_1, \alpha_2$ represent the intercept and the baseline (low-stress-regime) effects of lagged financial stress and output. The coefficients $\beta_0, \beta_1, \beta_2$ capture the incremental (high-stress regime) effects that become active as $G(\cdot)$ approaches one, i.e., when financial stress rises above its threshold $c$. The vector $\boldsymbol{\delta}$ contains the coefficients associated with the exogenous crisis dummies.
+
+The estimation results follow in Table 1.
+
+\textbf{Table 1.} The estimation results of the smooth transition regression over the sample of 2009Q1-2025Q1
+
+\begin{table}[htbp]
+\centering
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.2}
+{\small
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+\textbf{Variable} & \textbf{Parameter} & \textbf{Coefficient} &
+\textbf{Std. Error} & \textbf{p-value} & \textbf{Description} \\
+\hline
+\Varcell{\textbf{Threshold variables\\(linear part)}} &  &  &  &  &  \\ \hline
+\Varcell{D(FSI(t-1)) $[s_{t-1}]$} & $\alpha_1$ & $-0.2407^{***}$ & $0.0149$ & $0.0000$ &
+\Desccell{Lagged change in financial stress index (linear regime)} \\
+\hline
+\Varcell{Constant [intercept]} & $\alpha_0$ & $0.0084^{**}$ & $0.0029$ & $0.0057$ &
+\Desccell{Constant term in the linear regime} \\
+\hline
+\Varcell{DLOG(RGDP(t-1)) $[y_{t-1}]$} & $\alpha_2$ & $-0.2904^{***}$ & $0.0213$ & $0.0000$ &
+\Desccell{Lagged GDP growth (linear regime)} \\
+\hline
+
+\Varcell{\textbf{Threshold variables\\(non-linear part)}} &  &  &  &  &  \\ \hline
+\Varcell{D(FSI(t-1)) $[s_{t-1}]$} & $\beta_1$ & $0.2211^{***}$ & $0.0161$ & $0.0000$ &
+\Desccell{Incremental effect of lagged FSI in high-stress regime} \\
+\hline
+\Varcell{Constant [non-linear intercept]} & $\beta_0$ & $-0.0087^{**}$ & $0.0032$ & $0.0091$ &
+\Desccell{Non-linear constant term (regime-dependent intercept)} \\
+\hline
+\Varcell{DLOG(RGDP(t-1)) $[y_{t-1}]$} & $\beta_2$ & $0.8487^{***}$ & $0.0590$ & $0.0000$ &
+\Desccell{Incremental effect of lagged GDP growth in high-stress regime} \\
+\hline
+
+\Varcell{\textbf{Non-threshold\\(exogenous) variables}} &  &  &  &  &  \\ \hline
+\Varcell{WAR1\_DUMMY} & $\delta_{\text{WAR1}}$ & $-0.0286^{***}$ & $0.0033$ & $0.0000$ &
+\Desccell{First-war dummy (localized invasion episode)} \\
+\hline
+\Varcell{WAR2\_DUMMY} & $\delta_{\text{WAR2}}$ & $-0.2224^{***}$ & $0.0031$ & $0.0000$ &
+\Desccell{Full-scale invasion dummy} \\
+\hline
+\Varcell{WAR2\_DUMMY01} & $\delta_{\text{WAR2:01}}$ & $-0.2878^{***}$ & $0.0058$ & $0.0000$ &
+\Desccell{Additional full-scale-war period dummy} \\
+\hline
+\Varcell{COVID\_DUMMY} & $\delta_{\text{COVID}}$ & $-0.1032^{***}$ & $0.0029$ & $0.0000$ &
+\Desccell{COVID-19 pandemic dummy} \\
+\hline
+
+\Varcell{\textbf{Transition parameters}} &  &  &  &  &  \\ \hline
+\Varcell{Slope} & $\gamma$ & $77.1630$ & $54.4692$ & $0.1624$ &
+\Desccell{Smoothness parameter governing transition steepness} \\
+\hline
+\Varcell{Threshold} & $c$ & $0.1272^{***}$ & $0.0150$ & $0.0000$ &
+\Desccell{Estimated FSI threshold triggering regime shift} \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\textbf{Significance codes:}  *** p $<$ 0.01 ; ** p $<$ 0.05 ; * p $<$ 0.10
+
+\textit{The dependent variable is $DLOG(RGDP_t)\ (\equiv y_t)$. HAC standard errors are computed using the Bartlett kernel with a Newey–West fixed bandwidth of 4.}
+
+The threshold parameter $c\approx 0.13$ marks the point at which the economy begins to shift from a low-stress to a high-stress regime (the value of $G(s_{t-3};\gamma,c)$ being $0.5$), while the slope parameter $\gamma$ governs the speed of that transition. The low significance of slope is somewhat expected with the comparatively small sample and abrupt regime changes, leading $\gamma$ to assume larger values that are equally as good in fitting the data.
+
+When $s_{t-3}\ll c$, $G(\cdot)\approx 0$ and the model collapses to its linear (low-stress) form; when $s_{t-3}\gg c$, $G(\cdot)\approx 1$ and the coefficients of the non-linear component dominate.
+
+This formulation allows for the impact of financial stress on economic activity to vary smoothly across regimes, capturing the state-dependent dynamics under different levels of uncertainty.
+
+\begin{enumerate}
+\item \textbf{Empirical Analysis: Impact of FSI on Economic Activity}
+\end{enumerate}
+The estimated model features two critical transition function levels (and, correspondingly, lagged FSI levels):
+
+\begin{enumerate}
+\item The point where the lagged GDP elasticity turns from negative to positive (at $G(\cdot) \approx 0.3422$ or $s_{t-3} \approx 0.1187$), signifying the transition from around-the-trend fluctuations to a transitional dynamics;
+\item The point where the intercept turns from positive to negative ($G(\cdot) \approx 0.9655$ or $s_{t-3} \approx 0.1704$), defining the bias change.
+\end{enumerate}
+These bounds identify three regimes: low-stress (LS), intermediate-stress (IS), and  high-stress (HS), that can be described with the following equations:
+
+\begin{equation}\label{eq:lsreg}
+\text{LS}\ (G \in [0,0.3422)):\quad \Delta y_t = 0.0084 - 0.2407\,\Delta s_{t-1} - 0.2904\,\Delta y_{t-1} + \boldsymbol{\delta}'\mathbf{X}_t + \varepsilon_t
+\end{equation}
+
+
+\begin{equation}\label{eq:isreg}
+\begin{aligned}
+\text{IS}\ (G\in[0.3422,0.9655]):\ \Delta y_t
+&=(0.0027\pm0.0027)+(-0.0961\pm0.0689)\,\Delta s_{t-1}\\
+&\quad+(0.2645\pm0.2645)\,\Delta y_{t-1}+\boldsymbol{\delta}'\mathbf{X}_t+\varepsilon_t
+\end{aligned}
+\end{equation}
+
+\begin{equation}\label{eq:hstr}
+\text{HS}\ (G \in (0.9655,1]]):\quad \Delta y_t = -0.0003 - 0.0196\,\Delta s_{t-1} + 0.5583\,\Delta y_{t-1} + \boldsymbol{\delta}'\mathbf{X}_t + \varepsilon_t
+\end{equation}
+
+where
+\begin{equation}\label{eq:exog}
+\{\boldsymbol{\delta}'\mathbf{X}_t\}= -0.0286\,\text{WAR1}_t - 0.2224\,\text{WAR2}_t - 0.2878\,\text{WAR2}^{01}_t - 0.1032\,\text{COVID}_t
+\end{equation}
+
+These distinct regimes each represent a qualitatively different macro-financial environment. In the low-stress regime, a one-unit increase in financial stress reduces quarterly GDP growth by approximately 0.24 percentage points, with negative persistence ($\phi = -0.29$) indicating that temporary shocks tend to dissipate rather than accumulate. During high-stress periods, the short-run elasticity declines nearly twelve-fold in absolute value ($\beta \approx -0.02$), implying that once the system is already under severe stress, additional deterioration in financial conditions has little marginal impact. However, output persistence becomes strongly positive ($\phi \approx 0.56$), suggesting that post-crisis dynamics is dominated by inertia and gradual recovery rather than by new shocks, which correlates with the findings by \cite{duprey2020}. The intermediate regime lies between these extremes, combining moderate negative sensitivity ($\beta \approx -0.08$) with positive persistence ($\phi \approx 0.32$), reflecting a transitional phase of subdued growth under ongoing uncertainty. In other words, this is a stance where the base trend is still positive, but mid-levels of stress and positive elasticity of $\Delta y_t$ by $\Delta y_{t-1}$ combine into a stance with a critical but somewhat controllable threat to economic development in a short run. These regime characteristics are shown in Figures 3 and 4.
+
+\includegraphics[width=5.17in,height=4.69in]{img_2.png}
+
+\textbf{Figure 3.} The breakdown of effective regression coefficients for FSI and lagged GDP into identified regimes
+
+\includegraphics[width=6.26in,height=3.1in]{img_3.png}
+
+\textbf{Figure 4. }Breakdown of the lagged FSI (transition variable) levels into the identified regimes
+
+The decomposition of predicted changes in real GDP ($\Delta$RGDP) presented in Figure 5 highlights three distinct crisis setups corresponding to major downturns in 2009, 2014–2015, and 2022. In each episode, the contribution of financial stress (FSI input, shown in yellow) is strongly negative, while intercept and inertia components vary with the prevailing regime.
+
+\includegraphics[width=6.26in,height=3.92in]{img_4.png}
+
+\textbf{Figure 5.} Actual RGDP vs fitted RGDP change decomposition
+
+The 2009 contraction exhibits a sharp but short-lived FSI-driven decline, partially offset by positive inertia as the economy rebounded quickly from the global financial crisis. The 2014–2015 downturn combines intense FSI pressure with a pronounced negative exogenous component, reflecting structural output losses associated with geopolitical instability. The 2022 crisis, by contrast, is dominated by exogenous and crisis-shock effects, consistent with a structural regime shift following the full-scale invasion. In this phase, inertia emerges as the principal source of gradual recovery, occasionally supported by the easing of financial conditions.
+
+These dynamics illustrate how the interaction between FSI, inertia, and intercept components captures the non-linear adjustment of GDP to changing financial conditions. This pattern motivates the impulse-response functions (IRF) analysis and cumulative loss assessment presented in the following section, which quantify the magnitude and persistence of GDP reaction to financial stress shocks under different regimes.
+
+We calculate per-regime standard deviations for FSI, resulting in the following set of parameters per regime to simulate the cumulative impact amounting to the values after 1 year (Table 2 and Figure 6), suggesting stronger real effects of financial stress, especially in persistent high-uncertainty environments, consistent with Ukraine’s higher macro-financial sensitivity and lower financial depth.
+
+For a one-time shock of size $+\sigma_{\text{FSI}}$ in period $t$, based on the obtained impulse-response function we calculate cumulative GDP losses as:
+\[
+\text{CumImpact}(T)= 100 \times \beta_1 \sigma_{\text{FSI}}\frac{1 - \phi^T}{1 - \phi},\quad T = \text{number of quarters after shock}. \tag{8}
+\]
+
+\textbf{Table 2.} Cumulative FSI effect on long-term GDP dynamics
+
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+Regime & $\bar{G}$ & $\sigma_{\Delta \text{FSI}}$ & $\beta$ & $\phi$ & 1 year cumulative, \% \\ \hline
+LS & 0.0013 & 0.0418 & -0.2404 & -0.2892 & -0.7708 \\ \hline
+IS  & 0.7164 & 0.0555 & -0.0822 & 0.3176 & -0.6602 \\ \hline
+HS & 0.9999 & 0.2468 & -0.0195 & 0.5582 & -0.9808 \\ \hline
+\end{tabular}
+
+\includegraphics[width=6.26in,height=2.5in]{img_5.png}
+
+\textbf{Figure 6.} Cumulative impact of a $1\sigma$ FSI Shock over time
+
+Given the univariate nature of the model, which precludes the possibility of negative stabilizing feedback mechanisms, the cumulative effect estimated above should be regarded primarily as a theoretical construct rather than a directly interpretable economic outcome. The regimes can be interpreted as follows:
+
+\begin{itemize}
+\item under low-stress, the simulated GDP loss effect is -0.77\%, reflecting high sensitivity to FSI changes, even though the expected stress volatility is low. This is consistent with the increased vulnerability of highly liberalized economies to sudden disruptions and volatility. The inertia coefficient is negative, signifying immediate correction and oscillation around the trend.
+\item Under high stress, although the elasticity ($\beta_1$) is the smallest, the very high volatility ($\sigma \approx 0.24$) and persistence ($\phi \approx 0.56$) lead to a larger long-term effect, around -0.98\% in 1 year and -1.09\% after five years.
+\item The intermediate regime produces a comparatively smaller cumulative impact – approximately 0.66\% after one year – with limited further evolution over time. This reflects elevated volatility, yet lower sensitivity to changes in financial stress and moderate persistence. Noteworthy, this dynamics is simulated based on the parameters that correspond to the mean level of the transition function observed during this regime. However, the medium range of FSI levels amplifies the non-linear nature of the possible dynamics, contributing to higher levels of uncertainty (which coincides with the findings by \cite{ahir2023} for emerging market economies).
+\end{itemize}
+We simulated regime transitions observed in the sample: low- to high-stress (LS$\to$HS), high- to intermediate-stress (HS$\to$IS), and intermediate- to low-stress (IS$\to$LS). The transitions are modeled as changes in the FSI from the mean of one regime to the mean of the next, resulting in an increase for LS$\to$HS and decreases for the other two, as summarized in Table 3 and Figure 7.
+
+\textbf{Table 3.} Regime transition cumulative effects
+
+\begin{tabular}{|l|l|l|}
+\hline
+Transition & $\Delta$ FSI & 1y cumulative \% \\ \hline
+LS$\to$HS & 0.3588 & -4.7111 \\ \hline
+HS$\to$IS & -0.2526 & 1.4920 \\ \hline
+IS$\to$LS & -0.1063 & 1.8616 \\ \hline
+\end{tabular}
+
+\includegraphics[width=6.26in,height=4.69in]{img_6.png}
+
+\textbf{Figure 7.} Regime transition IRF and RGDP gains over time
+
+The simulations reflect movements between mean stress levels of adjacent regimes, incorporating the three historically observed transitions. A three-quarter lag before regime switching, consistent with the model’s transition variable $\Delta$FSI$_{t-3}$, introduces an adaptation phase. During the LS$\to$HS shift, the counter-cyclical pattern of the LS regime coincides with a sharp rise in FSI and a resulting GDP decline, creating a short rebound followed by a prolonged downturn characteristic of the HS regime. In contrast, transitions toward lower stress levels generate an immediate GDP increase, most pronounced when moving from IS to LS, followed by a gradual adjustment and sustained positive growth.
+
+\textbf{V. Discussion and Interpretation of Results}
+
+In line with previous cross-country literature, we do find that in Ukraine \textbf{financial stress significantly affects real economic activity}, at least in the short to medium term. In contrast to \cite{romer2017} and in line with \cite{ahir2023} and \cite{duprey2020}, we do establish non-linear patterns. However, while empirical evidence from \cite{ahir2023} suggests statistically significant effects when financial stress is increased, we do find that financial stress is significant at all times. At the same time, our results indicate that financial stress has a higher impact on economic activity in a high-stress regime as compared to low- and medium-stress.
+
+The empirical results provide robust evidence that financial stress exerts a \textbf{non-linear and state-dependent impact on real economic activity} in Ukraine. The estimated effects differ substantially across regimes, confirming that the interrelation between financial stress and GDP growth changes both in magnitude and persistence depending on the prevailing level of systemic tension. Pairwise Granger causality tests indicate a unidirectional causal link from the FSI to real GDP, statistically significant up to two-quarter lags. Episodes of financial stress shift therefore tend to precede output changes, especially for the GDP recovery episodes, although the predictive power remains moderate. This finding lends support to the hypothesis that financial stress is transmitted to the real economy primarily via heightened risk perceptions among investors, firms, and households. These perceptions manifest through increased credit and liquidity risks.
+
+Notably, the model identifies an additional intermediate regime – characterized by persistently elevated moderate stress levels and flat economic growth maintained during prolonged uncertainty such as protracted war period.
+
+Combining the estimated coefficients with the intrinsic volatility of the FSI allows quantifying the expected cumulative effects of a one-standard-deviation financial-stress shock. Within one year, GDP declines by approximately 0.77\% in the low-stress (LS) regime, where the strong negative elasticity of output to financial stress dominates the dynamics. In contrast, the high-stress (HS) regime shows a comparatively larger cumulative loss of about 0.98\%, as the lower immediate elasticity is offset by the higher volatility of financial stress and the positive persistence of GDP growth, which prolongs the adjustment phase.
+
+The intermediate-stress (IS) regime represents a zone of elevated uncertainty, where the transition function spans a broad range of values. The heightened uncertainty during this period is primarily driven by the foreign exchange market subindex, likely reflecting the size and frequency of FX interventions. Following the period of macroeconomic stabilization –  supported by foreign assistance and emergency policy measures – the continuation of the invasion and its associated shocks (including repeated attacks on energy infrastructure and economy-wide) are understood to have contributed to the emergence of the intermediate-stress regime.This configuration gives rise to non-linear, state-dependent dynamics, wherein marginal shifts in financial stress may trigger disproportionately large variations in economic response. The estimated 0.66\% GDP decline within one year in this regime is based on the mean-level effective coefficients, yet the flexible, non-linear nature of the STR specification in this regime implies considerably greater uncertainty in magnitude and timing of the real-sector response to financial-stress fluctuations. Across all regimes, the estimated negative output effects surpass those reported for emerging markets in \cite{ahir2023}, though they remain within proximity of the study’s 90 percent confidence intervals. Moreover, their assessment of the intermediate-stress regime as exhibiting the highest level of uncertainty – relative to both low- and high-stress conditions – corresponds closely with the patterns observed in our empirical sample. The comparatively elevated GDP losses observed – exceeding those reported by \cite{ahir2023} – may reflect Ukraine’s heightened vulnerability to financial disturbances, stemming from external shock exposure and shallow financial intermediation. This structural weakness constrains the effectiveness of monetary policy transmission via domestic credit channels.
+
+Dynamic regime-switching simulations further illustrate how the economy reacts when it moves from one state to another – such as from a normal to a crisis environment or from crisis toward normalization. When the system transitions from LS to HS, GDP initially falls sharply as the new high-stress parameters take hold, but subsequent quarters show gradual stabilization as positive inertia builds under crisis-adapted expectations. Conversely, when the system moves from HS to IS, the adjustment becomes smoother: the recovery of financial conditions triggers moderate growth gains, yet the economy remains locked in a subdued growth path consistent with prolonged uncertainty. Finally, a shift from IS back to LS yields limited short-term growth acceleration, as the inertia carried over from the preceding regime continues to dominate the near-term dynamics. These simulated transitions confirm that the economy’s sensitivity to shocks depends not only on the current stress level but also on the direction of the regime change, highlighting the asymmetric nature of post-crisis recoveries versus crisis onsets.
+
+The diminishing marginal effects observed under conditions of high stress likely reflect the introduction of stabilization measures and structural adaptation of economic agents that is triggered once systemic stress reaches critical levels. Coordinated responses across monetary, exchange rate, and fiscal policy domains – alongside capital flow management and continued external financial assistance – serve to mitigate the risk of deeper economic contraction. Meanwhile, the intermediate-stress regime, observed during the protracted war period, represents a dynamic equilibrium of moderately elevated stress with subdued growth. In this sense, the FSI captures underlying structural uncertainty rather than immediate instability, delineating the transition from shock-induced contraction toward a phase of adaptive stabilization.
+
+Another key finding is that the Financial Stress Index (FSI) in Ukraine provides relevant, though partial, insights into forthcoming economic developments. The FSI exhibits several characteristics of a \textbf{near-term early-warning indicator}: while it does not reliably predict the onset of crises when analyzed jointly with GDP at a quarterly frequency – largely because the major shocks in the sample are exogenous – its normalization consistently precedes GDP recovery by about two to three quarters. This pattern is evident across episodes such as the global financial crisis of 2008-09, Russian annexation of Crimea and invasion of Donbas in 2014-15, and the full-scale invasion in 2022, when sharp FSI spikes and GDP contractions occurred almost simultaneously, confirming the external nature of those shocks. In contrast, the subsequent easing of financial stress has typically led to economic recovery. The high-frequency nature of the FSI enhances its usefulness for real-time monitoring of financial conditions that transmit to economic activity, usually reflected in GDP data with a four- to five-month lag. Thus, although the FSI does not predict crises, it effectively signals turning points in the post-shock adjustment phase and can serve as a leading indicator of recovery.
+
+Finally, unlike in the EMs from the studies of \cite{ahir2023} and \cite{sahoo2020}, we did not find the \textbf{feedback loop from the real economy to financial stress}. No statistically significant feedback effect is detected. Under the assumptions of the present setup, changes in economic activity do not Granger-cause variations in FSI. This contrasts with some \cite{ahir2023} findings that report weak feedback after roughly one year in emerging-market studies. Lack of sensitivity of financial conditions to macroeconomic variables can possibly be attributed to the country’s limited depth of financial markets and services. Also, financial stress in Ukraine is often driven by external shocks rather than domestic economic cycles, and these shocks dominate FSI dynamics, making domestic GDP fluctuations less impactful. Capital controls and central bank’s FX interventions can also restrict the feedback loop.
+
+\textbf{VI. Conclusions}
+
+In conclusion, this study provides evidence that the interrelation between financial stress and real economic activity in Ukraine from 2008 to 2025 is both \textbf{unidirectional and non-linear}. The results of the Granger causality analysis confirm a one-way causal link from financial stress to real GDP, indicating that changes in financial conditions tend to precede shifts in the patterns of economic activity rather than the other way around. Unlike findings in some comparable studies, we show that the \textbf{elasticity of GDP with respect to changes in the Financial Stress Index (FSI)} diminishes as stress levels intensify.
+
+An analysis of regime-dependent dynamics reveals the presence of \textbf{three distinct stress regimes} – low-stress, high-stress, and intermediate-stress – with the latter capturing the current economic environment in Ukraine during the ongoing Russian full-scale invasion. Each regime exhibits unique characteristics and transition patterns, contributing to a \textbf{delayed and asymmetric response} of GDP to shifts in financial stress. Across all regimes, we observe a \textbf{strong negative interrelation between FSI and GDP}, alongside notable shifts in the underlying growth rate and persistence of economic activity. The additional intermediate regime, marked by prolonged elevated stress levels, represents a fragile equilibrium with subdued growth and high uncertainty, yet relatively low sensitivity of output to financial stress changes.
+
+The analysis also suggests that while the FSI performs well as a leading indicator of recovery, especially in post-crisis periods, it has limited predictive power for the onset of crises. Nevertheless, the daily frequency and composite structure of Ukraine’s FSI enhance its responsiveness and granularity, offering policymakers a valuable real-time measure of financial conditions. This makes the FSI a valuable tool for policymakers. The National Bank of Ukraine has appropriately adopted the FSI to monitor systemic risk and macroeconomic uncertainty. Beyond its current applications by the central bank, such as informing capital flow measures and guiding macroprudential policies including the release of counter-cyclical capital buffers, the FSI can be leveraged as a predictive tool for recovery trajectories.
+
+The findings in this study contribute to the literature on macro-financial linkages and the transmission of financial stress in emerging economies, particularly in episodes of heightened uncertainty. Looking ahead, given that many FSI subcomponents are sensitive to monetary policy actions, future research could explore the\textbf{ nexus between financial stress, monetary policy, and economic activity}, potentially enriching the understanding of policy transmission mechanisms under conditions of systemic stress.
+
+\textbf{Disclosure Statement}
+
+No potential conflict of interest was reported by the author(s).
+
+\textbf{Data availability statement}
+
+The data supporting the findings of this study are publicly available from [name of source - the XXX database] at https://dfr.oregon.gov/pages/index.aspx, reference number [if applicable]. All data were accessed on November 8, 2025.
+
+\setlength{\bibhang}{0.5in}         % hanging indent
+\setlength{\bibsep}{0.5\baselineskip}
+\bibliographystyle{chicagoa}
+\bibliography{biblio}
+
+\newpage
+
+\textbf{Appendices}
+
+\textbf{Appendix 1. }
+
+\textbf{Table A1. }Summary of the sequential Granger causality tests
+
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Lags} & \textbf{Null Hypothesis} & \textbf{F-Statistic} & \textbf{p-value} & \textbf{Conclusion (5\% level)} \\ \hline
+\textbf{1} & D(FSI) $\to$ DLOG(RGDP) & 7.30 & \textbf{0.0088} & \textbf{Reject H$_0$ $\to$ FSI Granger-causes GDP} \\ \hline
+ & DLOG(RGDP) $\to$ D(FSI) & 0.98 & 0.325 & No causality \\ \hline
+\textbf{2} & D(FSI) $\to$ DLOG(RGDP) & 3.17 & \textbf{0.0489} & \textbf{Reject H$_0$ (marginal) $\to$ FSI $\to$ GDP} \\ \hline
+ & DLOG(RGDP) $\to$ D(FSI) & 0.10 & 0.906 & No causality \\ \hline
+\textbf{3} & D(FSI) $\to$ DLOG(RGDP) & 2.87 & \textbf{0.0442} & \textbf{Reject H$_0$ (marginal) $\to$ FSI $\to$ GDP} \\ \hline
+ & DLOG(RGDP) $\to$ D(FSI) & 1.09 & 0.361 & No causality \\ \hline
+\textbf{4} & D(FSI) $\to$ DLOG(RGDP) & 1.75 & 0.152 & No causality \\ \hline
+ & DLOG(RGDP) $\to$ D(FSI) & 0.83 & 0.509 & No causality \\ \hline
+\end{tabular}
+
+\includegraphics[width=6.26in,height=2.6in]{img_7.png}
+
+\textbf{Figure A1.} Confusion matrices and ROC curves for FSI as a predictor for RGDP change (one quarter lag)
+
+\includegraphics[width=6.26in,height=2.6in]{img_8.png}
+
+\textbf{Figure A2. }Confusion matrices and ROC curves for FSI as a predictor for RGDP change (two quarter lag)
+
+\includegraphics[width=6.26in,height=2.6in]{img_9.png}
+
+\textit{Turning rule detects sign reversals in quarterly GDP growth; lagged FSI change (D(FSI(-1))) used as predictor}
+
+\textbf{Figure A3. }Confusion matrices and ROC curves for FSI as a predictor for RGDP change (one quarter lag, turning point rule)
+
+\newpage
+
+\textbf{Appendix 2. }
+
+\textbf{Table A2. }Test results for the STR-type non-linearity
+
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Test Group} & \textbf{Key Results} & \textbf{Interpretation} \\ \hline
+\textbf{General Linearity (Luukkonen–Teräsvirta expansion)} & All null hypotheses H$_{04}$–H$_{01}$ strongly rejected (p $<$ 0.001). & The linear specification is decisively rejected; the relationship between variables exhibits non-linear (threshold-type) dynamics. \\ \hline
+\textbf{Sequential Teräsvirta test} & H$_1$ ($b_1 = 0 \mid b_2 = b_3 = 0$) and H$_2$ ($b_2 = 0 \mid b_3 = 0$) strongly rejected, Pr(H\textsubscript{1}) $\le$ Pr(H\textsubscript{2})
+
+H\textsubscript{3} ($b_3 = 0$) not rejected (p $\approx$ 0.56) & Suggests 1st-order logistic STR or LSTR1 non-linearity \\ \hline
+\textbf{Escribano–Jordà robustness check} & H$_{0L}$ ($b_2 = b_4 = 0$) not rejected (p $\approx$ 0.32), but H$_{0E}$ ($b_1 = b_3 = 0$) rejected (p $\approx$ 0.03). & Confirms preference for logistic (LSTR1) rather than exponential (ESTR) specification and validates non-linearity at 5\% level. \\ \hline
+\end{tabular}
+\newpage
+
+\textbf{Appendix 3. }
+
+\textbf{Table A.3. }Representative regime parameters
+
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+Regime & $\bar{G}$ & $\sigma_{\text{FSI}}$ & $\sigma_{\Delta \text{FSI}}$ & $n_G$ & $n_{\text{FSI}}$ \\ \hline
+LS & 0.001297 & 0.021790 & 0.041795 & 42 & 43 \\ \hline
+IS & 0.716424 & 0.014944 & 0.055530 & 6 & 7 \\ \hline
+HS & 0.999926 & 0.188292 & 0.246830 & 17 & 17 \\ \hline
+\end{tabular}
+\newpage
+
+\textbf{Tables and Figures in the Paper:}
+
+\textbf{Table 1.} The estimation results of the smooth transition regression over the sample of 2009Q1-2025Q1
+
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+\textbf{Variable} & \textbf{Parameter} & \textbf{Coefficient} & \textbf{Std. Error} & \textbf{p-value} & \textbf{Description} \\ \hline
+\textbf{Threshold variables (linear part)} &  &  &  &  &  \\ \hline
+D(FSI(t-1)) $[s_{t-1}]$ & $\alpha_1$ & $-0.2407^{***}$ & $0.0149$ & $0.0000$ & Lagged change in financial stress index (linear regime) \\ \hline
+Constant [intercept] & $\alpha_0$ & $0.0084^{**}$ & $0.0029$ & $0.0057$ & Constant term in the linear regime \\ \hline
+DLOG(RGDP(t-1)) $[y_{t-1}]$ & $\alpha_2$ & $-0.2904^{***}$ & $0.0213$ & $0.0000$ & Lagged GDP growth (linear regime) \\ \hline
+\textbf{Threshold variables (non-linear part)} &  &  &  &  &  \\ \hline
+D(FSI(t-1)) $[s_{t-1}]$ & $\beta_1$ & $0.2211^{***}$ & $0.0161$ & $0.0000$ & Incremental effect of lagged FSI in high-stress regime \\ \hline
+Constant [non-linear intercept] & $\beta_0$ & $-0.0087^{**}$ & $0.0032$ & $0.0091$ & Non-linear constant term (regime-dependent intercept) \\ \hline
+DLOG(RGDP(t-1)) $[y_{t-1}]$ & $\beta_2$ & $0.8487^{***}$ & $0.0590$ & $0.0000$ & Incremental effect of lagged GDP growth in high-stress regime \\ \hline
+\textbf{Non-threshold (exogenous) variables} &  &  &  &  &  \\ \hline
+WAR1\_DUMMY & $\delta_{\text{WAR1}}$ & $-0.0286^{***}$ & $0.0033$ & $0.0000$ & First-war dummy (localized invasion episode) \\ \hline
+WAR2\_DUMMY & $\delta_{\text{WAR2}}$ & $-0.2224^{***}$ & $0.0031$ & $0.0000$ & Full-scale invasion dummy \\ \hline
+WAR2\_DUMMY01 & $\delta_{\text{WAR2:01}}$ & $-0.2878^{***}$ & $0.0058$ & $0.0000$ & Additional full-scale-war period dummy \\ \hline
+COVID\_DUMMY & $\delta_{\text{COVID}}$ & $-0.1032^{***}$ & $0.0029$ & $0.0000$ & COVID-19 pandemic dummy \\ \hline
+\textbf{Transition parameters} &  &  &  &  &  \\ \hline
+Slope & $\gamma$ & $77.1630$ & $54.4692$ & $0.1624$ & Smoothness parameter governing transition steepness \\ \hline
+Threshold & $c$ & $0.1272^{***}$ & $0.0150$ & $0.0000$ & Estimated FSI threshold triggering regime shift \\ \hline
+\end{tabular}
+
+\newpage
+
+\textbf{Table 2.} Cumulative FSI effect on long-term GDP dynamics
+
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+Regime & $\bar{G}$ & $\sigma_{\Delta \text{FSI}}$ & $\beta$ & $\phi$ & 1 year cumulative, \% \\ \hline
+LS & 0.0013 & 0.0418 & -0.2404 & -0.2892 & -0.7708 \\ \hline
+IS  & 0.7164 & 0.0555 & -0.0822 & 0.3176 & -0.6602 \\ \hline
+HS & 0.9999 & 0.2468 & -0.0195 & 0.5582 & -0.9808 \\ \hline
+\end{tabular}
+\newpage
+
+\textbf{Table 3.} Regime transition cumulative effects
+
+\begin{tabular}{|l|l|l|}
+\hline
+Transition & $\Delta$ FSI & 1y cumulative \% \\ \hline
+LS$\to$HS & 0.3588 & -4.7111 \\ \hline
+HS$\to$IS & -0.2526 & 1.4920 \\ \hline
+IS$\to$LS & -0.1063 & 1.8616 \\ \hline
+\end{tabular}
+\newpage
+
+\textbf{ }
+
+\includegraphics[width=6.26in,height=2.52in]{img_10.png}
+
+\textbf{Figure 1. }The dynamics of FSI subindices, March 2008 - May 2025. Source: NBU FSR
+
+\textbf{ }
+
+\includegraphics[width=6.26in,height=2.58in]{img_11.png}
+
+\textbf{Figure 2. }Historical perspective of the FSI dynamics during 2008-25. Source: NBU website
+
+\textbf{ }
+
+\includegraphics[width=5.17in,height=4.71in]{img_12.png}
+
+\textbf{Figure 3. }The breakdown of effective regression coefficients for FSI and lagged GDP into identified regimes
+
+\includegraphics[width=6.26in,height=3.1in]{img_13.png}
+\textbf{Figure 4. }Breakdown of the lagged FSI (transition variable) levels into the identified regimes
+
+\includegraphics[width=6.26in,height=3.9in]{img_14.png}
+\textbf{Figure 5. }Actual RGDP vs fitted RGDP change decomposition
+
+\textbf{ }
+
+\includegraphics[width=6.26in,height=2.5in]{img_15.png}
+
+\textbf{Figure 6. }Cumulative impact of a 1 FSI Shock over time
+
+\textbf{ }
+
+\includegraphics[width=6.26in,height=4.68in]{img_16.png}
+
+\textbf{Figure 7.} Regime transition IRF and RGDP gains over time
+
+\textbf{List of Figures in the Paper:}
+
+\textbf{Figure 1. }The dynamics of FSI subindices, March 2008 - May 2025. Source: NBU FSR
+
+\textbf{Figure 2. }Historical perspective of the FSI dynamics during 2008-25. Source: NBU website\textbf{ }
+
+\textbf{Figure 3. }The breakdown of effective regression coefficients for FSI and lagged GDP into identified regimes
+
+\textbf{Figure 4. }Breakdown of the lagged FSI (transition variable) levels into the identified regimes
+
+\textbf{Figure 5. }Actual RGDP vs fitted RGDP change decomposition
+
+\textbf{Figure 6. }Cumulative impact of a 1 FSI Shock over time
+
+\textbf{Figure 7.} Regime transition IRF and RGDP gains over time
+
+\end{document}

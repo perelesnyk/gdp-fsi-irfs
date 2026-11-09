@@ -24,7 +24,7 @@ YLIM_BOTTOM = None
 BAR_WIDTH_DAYS = 75  # try 60–90 if you want even thicker
 
 # Save output
-OUT_PNG = Path("rgdp_fit_decomp.png")
+OUT_JPG = Path("rgdp_fit_decomp.jpg")
 
 # ----------------------------
 # Column mapping (adjust if your headers differ)
@@ -120,10 +120,10 @@ if not df.empty:
     spans.append((start, df["__date"].iloc[-1] + pd.Timedelta(days=90), cur_reg))
 
 REGION_COLOR = {
-    "LS": (0.85, 0.95, 0.85, 0.35),  # soft green
-    "IS": (0.99, 0.95, 0.80, 0.35),  # soft yellow
-    "HS": (0.98, 0.85, 0.85, 0.35),  # soft red
-    "NA": (0.92, 0.92, 0.92, 0.30),
+    "LS": (0.80, 0.93, 0.80, 0.45),  # softer but clearer green
+    "IS": (0.99, 0.92, 0.70, 0.45),  # brighter yellow
+    "HS": (0.96, 0.70, 0.70, 0.45),  # more distinct red
+    "NA": (0.90, 0.90, 0.90, 0.35),  # neutral gray for missing data
 }
 
 # ----------------------------
@@ -268,5 +268,5 @@ for ax in (ax_top, ax_bot):
         ax.axvline(year, color="gray", linestyle="--", linewidth=0.8, alpha=0.4, zorder=0)
 
 plt.tight_layout()
-plt.savefig(OUT_PNG, dpi=180)
-print(f"Saved: {OUT_PNG.resolve()}")
+plt.savefig(OUT_JPG, dpi=300, format="jpeg")
+print(f"Saved: {OUT_JPG.resolve()}")

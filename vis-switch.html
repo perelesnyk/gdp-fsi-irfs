@@ -33,7 +33,7 @@
         <span id="fsi0Val" class="pill">0.1411</span>
       </div>
       <input id="fsi0" type="range" min="0" max="0.8" step="0.0005" value="0.1411">
-      <div class="tiny">Mapped to a regime (by FSI bands) → representative Ḡ is used for coefficients.</div>
+      <div class="tiny">Mapped to a regime (by FSI bands) → representative Ḡ is used for coefficients.</div>
     </div>
 
     <div class="card">
@@ -46,6 +46,15 @@
     </div>
   </div>
 
+  <div class="card" style="margin:8px 0">
+    <div class="row">
+      <label for="ciSlider"><b>Confidence Level</b></label>
+      <span id="ciVal" class="pill">68%</span>
+    </div>
+    <input id="ciSlider" type="range" min="50" max="99" step="1" value="68" />
+    <div class="tiny">Common levels: 68% (±1 SE) • 90% (±1.645 SE) • 95% (±1.96 SE) • 99% (±2.576 SE)</div>
+  </div>
+
   <div class="meta">
     <span class="tag">FSI bands (for mapping only): LS ≤ 0.1187 • IS (0.1187, 0.1704] • HS &gt; 0.1704</span>
     <span class="tag">Regime switch occurs at <b>t=3</b> (transition uses ΔFSI<sub>t−3</sub>)</span>
@@ -55,11 +64,11 @@
   <div class="plots">
     <div>
       <svg id="irfSvg"></svg>
-      <div class="tiny" style="margin-top:6px">IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted. Shaded area shows 68% confidence interval (±1 SE).</div>
+      <div class="tiny" style="margin-top:6px" id="irfCaption">IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted. Shaded area shows 68% confidence interval.</div>
     </div>
     <div>
       <svg id="cumSvg"></svg>
-      <div class="tiny" style="margin-top:6px">Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted. Shaded area shows 68% confidence interval (±1 SE).</div>
+      <div class="tiny" style="margin-top:6px" id="cumCaption">Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted. Shaded area shows 68% confidence interval.</div>
     </div>
   </div>
 </div>
@@ -75,6 +84,22 @@ const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
 /* Standard errors (from HAC covariance matrix) */
 const se_cL = 0.0029,  se_bL = 0.0149,  se_aL = 0.0213;
 const se_cN = 0.0032,  se_bN = 0.0161,  se_aN = 0.0590;
+
+/* Full HAC covariance matrix for [cL, bL, aL, cN, bN, aN] */
+const HAC = [
+  [8.507526398719898e-06, -2.481778447058299e-06, 7.966160692733066e-06,
+   -7.867716334907634e-06, 1.209793606002429e-07, -6.058187308713758e-05],
+  [-2.481778447058299e-06, 0.0002222572618298202, -5.083520951131941e-05,
+   1.030834129704509e-05, -0.0002267137873032802, -0.0002898724110253803],
+  [7.966160692733066e-06, -5.083520951131941e-05, 0.0004538704845508114,
+   -1.539527789330668e-05, 8.75283613440443e-05, 0.0002569638379923147],
+  [-7.867716334907634e-06, 1.030834129704509e-05, -1.539527789330668e-05,
+   1.029641781553392e-05, -7.276883740540779e-06, -1.977877749943097e-05],
+  [1.209793606002429e-07, -0.0002267137873032802, 8.75283613440443e-05,
+   -7.276883740540779e-06, 0.000259886179521454, 0.0003731099645247996],
+  [-6.058187308713758e-05, -0.0002898724110253803, 0.0002569638379923147,
+   -1.977877749943097e-05, 0.0003731099645247996, 0.003484345146219229]
+];
 
 /* Regime thresholds in G (used conceptually for coloring; mapping FSI→band→Ḡ) */
 const G_CUT_LOW  = 0.3422;   // LS / IS
@@ -98,6 +123,20 @@ const margin = {top: 24, right: 16, bottom: 36, left: 52};
 
 const expPct = x => 100*(Math.exp(x)-1);
 
+// Convert confidence level (percentage) to z-score multiplier
+function confidenceToZ(pct) {
+  const map = {
+    50: 0.674, 68: 1.000, 80: 1.282, 90: 1.645,
+    95: 1.960, 99: 2.576
+  };
+  if (map[pct]) return map[pct];
+  const p = pct / 100;
+  const t = Math.sqrt(-2 * Math.log((1 - p) / 2));
+  const c0 = 2.515517, c1 = 0.802853, c2 = 0.010328;
+  const d1 = 1.432788, d2 = 0.189269, d3 = 0.001308;
+  return t - (c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t);
+}
+
 const areaGen = (xScale, yScale) => d3.area()
   .x((d,i) => xScale(i))
   .y0(d => yScale(d.lower))
@@ -117,17 +156,34 @@ function coeffs(G){
   const c    = cL + cN*G;
   const beta = bL + bN*G;
   const phi  = aL + aN*G;
-  // Standard errors for effective coefficients
-  const se_c    = Math.sqrt(se_cL**2 + (G*se_cN)**2);
-  const se_beta = Math.sqrt(se_bL**2 + (G*se_bN)**2);
-  const se_phi  = Math.sqrt(se_aL**2 + (G*se_aN)**2);
+  
+  // HAC-based variance using delta method
+  // Jacobians w.r.t. [cL, bL, aL, cN, bN, aN]
+  const J_c = [1, 0, 0, G, 0, 0];
+  const J_beta = [0, 1, 0, 0, G, 0];
+  const J_phi = [0, 0, 1, 0, 0, G];
+  
+  // Matrix multiplication: J' * HAC * J
+  let var_c = 0, var_beta = 0, var_phi = 0;
+  for(let i=0; i<6; i++){
+    for(let j=0; j<6; j++){
+      var_c += J_c[i] * HAC[i][j] * J_c[j];
+      var_beta += J_beta[i] * HAC[i][j] * J_beta[j];
+      var_phi += J_phi[i] * HAC[i][j] * J_phi[j];
+    }
+  }
+  
+  const se_c = Math.sqrt(var_c);
+  const se_beta = Math.sqrt(var_beta);
+  const se_phi = Math.sqrt(var_phi);
+  
   return {c, beta, phi, se_c, se_beta, se_phi};
 }
 
 /* Simulate baseline (constant regime at G_from) vs switching (G_from until t<3, then G_to).
    Shock is one-off ΔFSI = s, enters ΔFSI_{t−1} at t=1.
-   RETURNS baseline-subtracted IRF (%) and cumulative (%), with intercept INCLUDED, plus 68% CI. */
-function simulateSwitch(FSI0, shock){
+   RETURNS baseline-subtracted IRF (%) and cumulative (%), with intercept INCLUDED, plus CI. */
+function simulateSwitch(FSI0, shock, zMultiplier = 1.0){
   const FSI1 = FSI0 + shock;
   const bandFrom = bandFromFSI(FSI0);
   const bandTo   = bandFromFSI(FSI1);
@@ -164,9 +220,9 @@ function simulateSwitch(FSI0, shock){
     dlog_sw_var[t] = var_intercept + var_ar + var_shock + (se_phi * dlog_sw[t-1])**2;
   }
   
-  // Convert variance to ±1 SE bands (symmetric around point estimate)
-  const dlog_sw_upper = dlog_sw.map((v, i) => v + Math.sqrt(dlog_sw_var[i]));
-  const dlog_sw_lower = dlog_sw.map((v, i) => v - Math.sqrt(dlog_sw_var[i]));
+  // Convert variance to bands using z-score multiplier (symmetric around point estimate)
+  const dlog_sw_upper = dlog_sw.map((v, i) => v + zMultiplier * Math.sqrt(dlog_sw_var[i]));
+  const dlog_sw_lower = dlog_sw.map((v, i) => v - zMultiplier * Math.sqrt(dlog_sw_var[i]));
   
   const ylog_sw = dlog_sw.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
   const ylog_sw_upper = dlog_sw_upper.reduce((acc, x, i) => { acc[i]=(i?acc[i-1]:0)+x; return acc; }, []);
@@ -247,14 +303,20 @@ const cumPlot = setupSVG("#cumSvg","Cumulative (Δ vs baseline), % — intercept
 function update(){
   const FSI0 = +d3.select("#fsi0").property("value");
   const dFSI = +d3.select("#dFsi").property("value");
+  const ciLevel = +d3.select("#ciSlider").property("value");
+  const zMult = confidenceToZ(ciLevel);
+  
   d3.select("#fsi0Val").text(FSI0.toFixed(4));
   d3.select("#dFsiVal").text(dFSI.toFixed(4));
+  d3.select("#ciVal").text(ciLevel + "%");
+  d3.select("#irfCaption").text(`IRF = quarterly %, exact map 100·(exp(x)−1); baseline-subtracted. Shaded area shows ${ciLevel}% confidence interval.`);
+  d3.select("#cumCaption").text(`Cumulative = level %, exact map 100·(exp(Σx)−1); baseline-subtracted. Shaded area shows ${ciLevel}% confidence interval.`);
 
   const {
     irf_pct, irf_pct_upper, irf_pct_lower,
     cum_pct, cum_pct_upper, cum_pct_lower,
     meta
-  } = simulateSwitch(FSI0, dFSI);
+  } = simulateSwitch(FSI0, dFSI, zMult);
   const color = REG_COLOR[meta.bandTo];
 
   function redraw(plot, data, dataUpper, dataLower){
@@ -289,7 +351,7 @@ function update(){
     .text(`FSI: ${meta.FSI0.toFixed(4)} → ${(meta.FSI1).toFixed(4)}  (Δ=${(meta.FSI1-meta.FSI0).toFixed(4)})`);
 }
 
-d3.selectAll("#fsi0,#dFsi").on("input", update);
+d3.selectAll("#fsi0,#dFsi,#ciSlider").on("input", update);
 update();
 </script>
 </body>

@@ -1,0 +1,54 @@
+
+\subsection*{HAC Covariance Matrix and Confidence Interval Computation}
+
+The impulse response function confidence intervals are computed using the delta method with the HAC (Heteroskedasticity and Autocorrelation Consistent) covariance matrix from the STR estimation. Given that the effective coefficients vary with the transition index $G$:
+
+\begin{equation}
+\beta(G) = \alpha_1 + \beta_1 \cdot G, \quad \phi(G) = \alpha_2 + \beta_2 \cdot G
+\end{equation}
+
+where $\alpha_1, \beta_1$ are the linear and non-linear coefficients on $\Delta FSI_{t-1}$, and $\alpha_2, \beta_2$ are the linear and non-linear coefficients on $\Delta \log(RGDP_{t-1})$.
+
+The variance of these effective coefficients is computed via the delta method:
+
+\begin{equation}
+\text{Var}(\beta(G)) = \mathbf{J}_\beta^\top \mathbf{\Sigma}_{HAC} \mathbf{J}_\beta, \quad
+\text{Var}(\phi(G)) = \mathbf{J}_\phi^\top \mathbf{\Sigma}_{HAC} \mathbf{J}_\phi
+\end{equation}
+
+where $\mathbf{J}_\beta = [0, 1, 0, 0, G, 0]^\top$ and $\mathbf{J}_\phi = [0, 0, 1, 0, 0, G]^\top$ are Jacobian vectors with respect to the parameter vector $\boldsymbol{\theta} = [\alpha_0, \alpha_1, \alpha_2, \beta_0, \beta_1, \beta_2]^\top$, and $\mathbf{\Sigma}_{HAC}$ is the HAC covariance matrix:
+
+\begin{equation}
+\mathbf{\Sigma}_{HAC} \times 10^4 = 
+\begin{array}{c|cccccc}
+& \alpha_0 & \alpha_1 & \alpha_2 & \beta_0 & \beta_1 & \beta_2 \\
+\hline
+
+\alpha_0 & 0.0851 & -0.0248 & 0.0797 & -0.0787 & 0.0012 & -0.6058 \\
+\alpha_1 & -0.0248 & 2.2226 & -0.5084 & 0.1031 & -2.2671 & -2.8987 \\
+\alpha_2 & 0.0797 & -0.5084 & 4.5387 & -0.1540 & 0.8753 & 2.5696 \\
+\beta_0 & -0.0787 & 0.1031 & -0.1540 & 0.1030 & -0.0728 & -0.1978 \\
+\beta_1 & 0.0012 & -2.2671 & 0.8753 & -0.0728 & 2.5989 & 3.7311 \\
+\beta_2 & -0.6058 & -2.8987 & 2.5696 & -0.1978 & 3.7311 & 34.8435
+\end{array}
+\end{equation}
+
+The IRF variance at each horizon $h$ is then propagated through the autoregressive structure:
+
+\begin{equation}
+\begin{aligned}
+\text{IRF}[1] &= \beta(G) \cdot \sigma, \quad \text{Var}(\text{IRF}[1]) = \text{Var}(\beta(G)) \cdot \sigma^2 \\
+\text{IRF}[h] &= \text{IRF}[h-1] \cdot \phi(G) \quad (h \geq 2) \\
+\text{Var}(\text{IRF}[h]) &= \phi(G)^2 \cdot \text{Var}(\text{IRF}[h-1]) + \text{IRF}[h-1]^2 \cdot \text{Var}(\phi(G))
+\end{aligned}
+\end{equation}
+
+The 68\% confidence intervals are constructed as $\text{IRF}[h] \pm \sqrt{\text{Var}(\text{IRF}[h])}$. This approach properly accounts for:
+\begin{enumerate}
+\item \textbf{Cross-coefficient correlations}: The off-diagonal elements of $\mathbf{\Sigma}_{HAC}$ capture correlations between parameter estimates. For example, $\text{Cov}(\alpha_1, \beta_1) = -0.227 \times 10^{-4}$ indicates that linear and non-linear FSI coefficients are negatively correlated, which substantially reduces uncertainty in high-stress regimes.
+\item \textbf{Heteroskedasticity and autocorrelation}: The HAC estimator (Newey-West with Bartlett kernel, bandwidth 4) corrects for both heteroskedasticity in residuals and serial correlation up to 4 lags.
+\item \textbf{Variance accumulation}: Uncertainty compounds over horizons through the autoregressive dynamics, with wider bands in regimes exhibiting high persistence ($\phi \approx 0.56$ in HS).
+\end{enumerate}
+
+Note: $\alpha_0, \beta_0$ are the linear and non-linear intercepts (not used in IRF computation as we analyze deviations from baseline paths).
+

@@ -42,15 +42,23 @@
       <div class="tiny">Tip: IS σ≈0.0555, LS σ≈0.0418, HS σ≈0.2468</div>
     </div>
   </div>
+  <div class="card" style="margin:8px 0">
+    <div class="row">
+      <label for="ciSlider"><b>Confidence Level</b></label>
+      <span id="ciVal" class="pill">68%</span>
+    </div>
+    <input id="ciSlider" type="range" min="50" max="99" step="1" value="68" />
+    <div class="tiny">Common levels: 68% (±1 SE) • 90% (±1.645 SE) • 95% (±1.96 SE) • 99% (±2.576 SE)</div>
+  </div>
 
   <div class="plots">
     <div>
       <svg id="irfSvg"></svg>
-      <div class="tiny" style="margin-top:6px">IRF = quarterly % change: exact map 100·(exp(x)−1). Shaded area shows 68% confidence interval (±1 SE).</div>
+      <div class="tiny" style="margin-top:6px" id="irfCaption">IRF = quarterly % change: exact map 100·(exp(x)−1). Shaded area shows 68% confidence interval.</div>
     </div>
     <div>
       <svg id="cumSvg"></svg>
-      <div class="tiny" style="margin-top:6px">Cumulative = level % change: exact map 100·(exp(Σx)−1). Shaded area shows 68% confidence interval (±1 SE).</div>
+      <div class="tiny" style="margin-top:6px" id="cumCaption">Cumulative = level % change: exact map 100·(exp(Σx)−1). Shaded area shows 68% confidence interval.</div>
     </div>
   </div>
 </div>
@@ -63,6 +71,22 @@ const cN = -0.008686,  bN =  0.221148, aN =  0.848650;
 /* Standard errors (from HAC covariance matrix) */
 const se_bL = 0.0149,  se_aL = 0.0213;
 const se_bN = 0.0161,  se_aN = 0.0590;
+
+/* Full HAC covariance matrix for [cL, bL, aL, cN, bN, aN] */
+const HAC = [
+  [8.507526398719898e-06, -2.481778447058299e-06, 7.966160692733066e-06,
+   -7.867716334907634e-06, 1.209793606002429e-07, -6.058187308713758e-05],
+  [-2.481778447058299e-06, 0.0002222572618298202, -5.083520951131941e-05,
+   1.030834129704509e-05, -0.0002267137873032802, -0.0002898724110253803],
+  [7.966160692733066e-06, -5.083520951131941e-05, 0.0004538704845508114,
+   -1.539527789330668e-05, 8.75283613440443e-05, 0.0002569638379923147],
+  [-7.867716334907634e-06, 1.030834129704509e-05, -1.539527789330668e-05,
+   1.029641781553392e-05, -7.276883740540779e-06, -1.977877749943097e-05],
+  [1.209793606002429e-07, -0.0002267137873032802, 8.75283613440443e-05,
+   -7.276883740540779e-06, 0.000259886179521454, 0.0003731099645247996],
+  [-6.058187308713758e-05, -0.0002898724110253803, 0.0002569638379923147,
+   -1.977877749943097e-05, 0.0003731099645247996, 0.003484345146219229]
+];
 
 /* Regime thresholds by G (coloring) */
 const G_CUT_LOW = 0.3422;   // LS / IS
@@ -80,6 +104,23 @@ const margin = {top: 24, right: 16, bottom: 36, left: 52};
 
 /* ===== Utilities ===== */
 const expPct  = x => 100*(Math.exp(x)-1);
+
+// Convert confidence level (percentage) to z-score multiplier
+function confidenceToZ(pct) {
+  // Common mappings
+  const map = {
+    50: 0.674, 68: 1.000, 80: 1.282, 90: 1.645,
+    95: 1.960, 99: 2.576
+  };
+  if (map[pct]) return map[pct];
+  // Approximate using inverse normal CDF for other values
+  const p = pct / 100;
+  const t = Math.sqrt(-2 * Math.log((1 - p) / 2));
+  const c0 = 2.515517, c1 = 0.802853, c2 = 0.010328;
+  const d1 = 1.432788, d2 = 0.189269, d3 = 0.001308;
+  return t - (c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t);
+}
+
 const lineGen = (xScale, yScale) => d3.line()
   .x((d,i) => xScale(i))
   .y(d => yScale(d))
@@ -98,18 +139,33 @@ function regimeByG(G){
 }
 
 /* Compute IRF and cumulative given G and a one-time shock dFSI (lagged) */
-function computePaths(G, dFSI){
+function computePaths(G, dFSI, zMultiplier = 1.0){
   // effective coeffs (intercept not used in IRF)
   const beta = bL + bN*G;
   const phi  = aL + aN*G;
 
-  // Standard errors for beta and phi (simple linear combination)
-  const se_beta = Math.sqrt(se_bL**2 + (G*se_bN)**2);
-  const se_phi  = Math.sqrt(se_aL**2 + (G*se_aN)**2);
+  // HAC-based variance using delta method
+  // Jacobian for beta(G) w.r.t. [cL, bL, aL, cN, bN, aN]
+  const J_beta = [0, 1, 0, 0, G, 0];
+  // Jacobian for phi(G) w.r.t. [cL, bL, aL, cN, bN, aN]
+  const J_phi = [0, 0, 1, 0, 0, G];
+  
+  // Matrix multiplication: J' * HAC * J
+  let var_beta = 0, var_phi = 0, cov_beta_phi = 0;
+  for(let i=0; i<6; i++){
+    for(let j=0; j<6; j++){
+      var_beta += J_beta[i] * HAC[i][j] * J_beta[j];
+      var_phi += J_phi[i] * HAC[i][j] * J_phi[j];
+      cov_beta_phi += J_beta[i] * HAC[i][j] * J_phi[j];
+    }
+  }
+  
+  const se_beta = Math.sqrt(var_beta);
+  const se_phi = Math.sqrt(var_phi);
 
   // log-IRF (point estimate)
   const irfLog = Array(H+1).fill(0);
-  const irfLog_var = Array(H+1).fill(0); // variance at each horizon
+  const irfLog_var = Array(H+1).fill(0);
   
   if (isFinite(dFSI) && isFinite(beta) && isFinite(phi)){
     // Horizon 1: shock hits with lag
@@ -117,16 +173,16 @@ function computePaths(G, dFSI){
     irfLog_var[1] = (se_beta * dFSI)**2;
     
     // Horizons 2+: propagate with persistence
-    // Var(phi * y_{h-1}) = phi² * Var(y_{h-1}) + y_{h-1}² * Var(phi)
+    // Var(phi * y_{h-1}) = phi^2 * Var(y_{h-1}) + y_{h-1}^2 * Var(phi)
     for (let h=2; h<=H; h++){
       irfLog[h] = irfLog[h-1] * phi;
       irfLog_var[h] = (phi**2) * irfLog_var[h-1] + (irfLog[h-1]**2) * (se_phi**2);
     }
   }
   
-  // Convert variance to symmetric ±1 SE bands
-  const irfLog_upper = irfLog.map((v, i) => v + Math.sqrt(irfLog_var[i]));
-  const irfLog_lower = irfLog.map((v, i) => v - Math.sqrt(irfLog_var[i]));
+  // Convert variance to symmetric bands using z-score multiplier
+  const irfLog_upper = irfLog.map((v, i) => v + zMultiplier * Math.sqrt(irfLog_var[i]));
+  const irfLog_lower = irfLog.map((v, i) => v - zMultiplier * Math.sqrt(irfLog_var[i]));
   
   // cumulative in logs
   const cumLog = [], cumLog_upper = [], cumLog_lower = [];
@@ -135,8 +191,8 @@ function computePaths(G, dFSI){
     acc += (h===0 ? 0 : irfLog[h]);
     acc_var += (h===0 ? 0 : irfLog_var[h]);
     cumLog.push(acc);
-    cumLog_upper.push(acc + Math.sqrt(acc_var));
-    cumLog_lower.push(acc - Math.sqrt(acc_var));
+    cumLog_upper.push(acc + zMultiplier * Math.sqrt(acc_var));
+    cumLog_lower.push(acc - zMultiplier * Math.sqrt(acc_var));
   }
 
   // exact % transforms
@@ -228,8 +284,14 @@ const cumPlot = setupSVG("#cumSvg", "Cumulative (level, %)");
 function update(){
   const G     = +d3.select("#gSlider").property("value");
   const dFSI  = +d3.select("#shockSlider").property("value");
+  const ciLevel = +d3.select("#ciSlider").property("value");
+  const zMult = confidenceToZ(ciLevel);
+  
   d3.select("#gVal").text(G.toFixed(3));
   d3.select("#shockVal").text(dFSI.toFixed(4));
+  d3.select("#ciVal").text(ciLevel + "%");
+  d3.select("#irfCaption").text(`IRF = quarterly % change: exact map 100·(exp(x)−1). Shaded area shows ${ciLevel}% confidence interval.`);
+  d3.select("#cumCaption").text(`Cumulative = level % change: exact map 100·(exp(Σx)−1). Shaded area shows ${ciLevel}% confidence interval.`);
 
   const reg = regimeByG(G);
   const stroke = colors[reg];
@@ -238,7 +300,7 @@ function update(){
   const {
     irfPct, irfPct_upper, irfPct_lower,
     cumPct, cumPct_upper, cumPct_lower
-  } = computePaths(G, dFSI);
+  } = computePaths(G, dFSI, zMult);
 
   // rescale y to data (with margins), considering confidence bounds
   function setY(plot, data, dataUpper, dataLower){
@@ -286,7 +348,7 @@ function update(){
     .attr("d", cumPlot.line);
 }
 
-d3.selectAll("#gSlider,#shockSlider").on("input", update);
+d3.selectAll("#gSlider,#shockSlider,#ciSlider").on("input", update);
 update();
 </script>
 </body>
